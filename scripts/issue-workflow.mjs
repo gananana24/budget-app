@@ -15,7 +15,7 @@ function run(command, args, options = {}) {
 	});
 
 	if (result.error) {
-		throw new Error(`${command}を実行できませんでした: ${result.error.message}`);
+		throw new Error(`Could not run ${command}: ${result.error.message}`);
 	}
 
 	if (result.status !== 0 && !options.allowFailure) {
@@ -25,7 +25,7 @@ function run(command, args, options = {}) {
 			.filter(Boolean)
 			.join("\n");
 		throw new Error(
-			detail || `${command} ${args.join(" ")}が終了コード${result.status}で失敗しました。`,
+			detail || `${command} ${args.join(" ")} failed with exit code ${result.status}.`,
 		);
 	}
 
@@ -46,13 +46,13 @@ const root = output("git", ["rev-parse", "--show-toplevel"], {
 process.chdir(root);
 
 function fail(message) {
-	console.error(`\nエラー: ${message}`);
+	console.error(`\nError: ${message}`);
 	process.exit(1);
 }
 
 function issueNumber(value) {
 	if (!/^\d+$/.test(value ?? "") || Number(value) < 1) {
-		fail("Issue番号を正の整数で指定してください。");
+		fail("Enter a positive integer for the issue number.");
 	}
 	return Number(value);
 }
@@ -67,7 +67,7 @@ async function requestedIssueNumber(value) {
 		output: process.stdout,
 	});
 	try {
-		return issueNumber(await readline.question("Issue番号を入力してください: "));
+		return issueNumber(await readline.question("Enter issue number: "));
 	} finally {
 		readline.close();
 	}
@@ -85,7 +85,7 @@ function ensureClean() {
 	const status = output("git", ["status", "--porcelain"]);
 	if (status) {
 		fail(
-			"未コミットの変更があります。コミットまたは退避してから再実行してください。\n" +
+			"The working tree has uncommitted changes. Commit or stash them before retrying.\n" +
 				status,
 		);
 	}
@@ -109,14 +109,14 @@ function issueNumberFromBranch() {
 	const match = /^issue\/(\d+)$/.exec(branch);
 	if (!match) {
 		fail(
-			`現在のブランチ「${branch || "(detached HEAD)"}」からIssue番号を判定できません。issue/<番号>ブランチで実行してください。`,
+			`Cannot determine an issue number from branch "${branch || "(detached HEAD)"}". Use an issue/<number> branch.`,
 		);
 	}
 	return Number(match[1]);
 }
 
 function runChecks() {
-	console.log("\n品質チェックを実行します。\n");
+	console.log("\nRunning quality checks.\n");
 	run("pnpm", ["check"]);
 }
 
@@ -125,7 +125,7 @@ function startIssue(number) {
 
 	const issue = readIssue(number);
 	if (issue.state !== "OPEN") {
-		fail(`Issue #${number}はOpenではありません: ${issue.url}`);
+		fail(`Issue #${number} is not open: ${issue.url}`);
 	}
 
 	const openBlockers = issue.blockedBy.nodes.filter(
@@ -135,7 +135,7 @@ function startIssue(number) {
 		const details = openBlockers
 			.map((blocker) => `#${blocker.number} ${blocker.title}`)
 			.join("\n");
-		fail(`未完了の依存Issueがあります。\n${details}`);
+		fail(`There are unresolved blocked-by issues.\n${details}`);
 	}
 
 	if (currentBranch() !== DEFAULT_BRANCH) {
@@ -168,8 +168,8 @@ function startIssue(number) {
 		]);
 	}
 
-	console.log(`\nIssue #${number}の作業を開始しました。`);
-	console.log(`ブランチ: ${branch}`);
+	console.log(`\nStarted work on Issue #${number}.`);
+	console.log(`Branch: ${branch}`);
 	console.log(`Issue: ${issue.url}`);
 }
 
@@ -198,12 +198,12 @@ function createPullRequest() {
 	const issue = readIssue(number);
 
 	if (issue.state !== "OPEN") {
-		fail(`Issue #${number}はOpenではありません: ${issue.url}`);
+		fail(`Issue #${number} is not open: ${issue.url}`);
 	}
 
 	const existing = existingPullRequest(branch);
 	if (existing) {
-		console.log(`すでにPull Requestがあります: ${existing.url}`);
+		console.log(`A Pull Request already exists: ${existing.url}`);
 		return;
 	}
 
@@ -211,7 +211,7 @@ function createPullRequest() {
 		output("git", ["rev-list", "--count", `origin/${DEFAULT_BRANCH}..HEAD`]),
 	);
 	if (ahead < 1) {
-		fail(`${DEFAULT_BRANCH}に含まれていないコミットがありません。`);
+		fail(`There are no commits ahead of ${DEFAULT_BRANCH}.`);
 	}
 
 	runChecks();
@@ -220,15 +220,15 @@ function createPullRequest() {
 	const directory = mkdtempSync(join(tmpdir(), "budget-app-pr-"));
 	const bodyPath = join(directory, "body.md");
 	const body = [
-		"## 変更内容",
+		"## Changes",
 		"",
-		"- Issueの受け入れ条件を満たす変更",
+		"- Changes that address the Issue acceptance criteria",
 		"",
-		"## 確認内容",
+		"## Verification",
 		"",
 		"- [x] `pnpm check`",
-		"- [ ] Issueの受け入れ条件を確認",
-		"- [ ] 必要な仕様書を更新",
+		"- [ ] Confirm the Issue acceptance criteria",
+		"- [ ] Update relevant specifications",
 		"",
 		`Closes #${number}`,
 		"",
@@ -270,7 +270,7 @@ function readyPullRequest() {
 	const branch = currentBranch();
 	const pullRequest = existingPullRequest(branch);
 	if (!pullRequest) {
-		fail("このブランチのOpenなPull Requestがありません。先にtask create:prを実行してください。");
+		fail("There is no open Pull Request for this branch. Run task create:pr first.");
 	}
 
 	runChecks();
@@ -288,8 +288,8 @@ function readyPullRequest() {
 		"--squash",
 	]);
 
-	console.log(`\nPull RequestをReadyにし、auto-mergeを設定しました: ${pullRequest.url}`);
-	console.log(`マージ後、task clean:issue ISSUE=${number}を実行してください。`);
+	console.log(`\nThe Pull Request is ready and squash auto-merge is enabled: ${pullRequest.url}`);
+	console.log(`After it merges, run task clean:issue -- ${number}.`);
 }
 
 function cleanIssue(number) {
@@ -298,13 +298,13 @@ function cleanIssue(number) {
 	const activeBranch = currentBranch();
 	if (activeBranch !== DEFAULT_BRANCH && activeBranch !== branch) {
 		fail(
-			`現在のブランチ「${activeBranch}」を保護するため終了します。${DEFAULT_BRANCH}または${branch}で実行してください。`,
+			`Stopping to protect branch "${activeBranch}". Run this from ${DEFAULT_BRANCH} or ${branch}.`,
 		);
 	}
 
 	const pullRequest = existingPullRequest(branch, "merged");
 	if (!pullRequest) {
-		fail(`${branch}のマージ済みPull Requestを確認できません。`);
+		fail(`Could not find a merged Pull Request for ${branch}.`);
 	}
 
 	if (activeBranch === branch) {
@@ -322,16 +322,16 @@ function cleanIssue(number) {
 		run("git", ["branch", "-D", branch]);
 	}
 
-	console.log(`\nIssue #${number}のローカル作業ブランチを片付けました。`);
+	console.log(`\nCleaned up the local branch for Issue #${number}.`);
 	console.log(`Pull Request: ${pullRequest.url}`);
 }
 
 function usage() {
-	console.log(`使い方:
-  task start:issue -- <Issue番号>
+	console.log(`Usage:
+  task start:issue -- <issue-number>
   task create:pr
   task ready:pr
-  task clean:issue -- <Issue番号>`);
+  task clean:issue -- <issue-number>`);
 }
 
 async function main() {
