@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: '3'
+
+tasks:
+  default:
+    desc: Show available development workflow tasks
+    cmds:
+      - task --list
+
+  start:issue:
+    desc: Update main and create a linked issue/<number> branch
+    requires:
+      vars:
+        - ISSUE
+    cmds:
+      - node scripts/issue-workflow.mjs start {{.ISSUE}}
+
+  create:pr:
+    desc: Check, push, and create a Draft Pull Request for the current Issue branch
+    cmds:
+      - node scripts/issue-workflow.mjs create-pr
+
+  ready:pr:
+    desc: Check the current Pull Request and enable squash auto-merge
+    cmds:
+      - node scripts/issue-workflow.mjs ready-pr
+
+  clean:issue:
+    desc: Update main and remove a merged local Issue branch
+    requires:
+      vars:
+        - ISSUE
+    cmds:
+      - node scripts/issue-workflow.mjs clean {{.ISSUE}}

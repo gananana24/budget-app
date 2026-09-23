@@ -1,6 +1,7 @@
 {
-	"name": "vite-react-template",
-	"description": "A template for building a React application with Vite, Hono, and Cloudflare Workers",
+	"name": "budget-app",
+	"description": "A personal budgeting web application",
+	"packageManager": "pnpm@10.24.0",
 	"cloudflare": {
 		"label": "Vite React Template",
 		"products": [
@@ -36,11 +37,11 @@
 	"scripts": {
 		"build": "tsc -b && vite build",
 		"cf-typegen": "wrangler types",
-		"check": "tsc && vite build && wrangler deploy --dry-run",
+		"check": "pnpm lint && pnpm build && wrangler deploy --dry-run",
 		"deploy": "wrangler deploy",
 		"dev": "vite",
 		"lint": "eslint .",
-		"preview": "npm run build && vite preview"
+		"preview": "pnpm build && vite preview"
 	},
 	"type": "module"
 }

@@ -1,4 +1,4 @@
-# React + Vite + Hono + Cloudflare Workers
+# 家計簿アプリ
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/vite-react-template)
 
@@ -45,13 +45,13 @@ A live deployment of this template is available at:
 Install dependencies:
 
 ```bash
-npm install
+pnpm install
 ```
 
 Start the development server with:
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 Your application will be available at [http://localhost:5173](http://localhost:5173).
@@ -61,19 +61,19 @@ Your application will be available at [http://localhost:5173](http://localhost:5
 Build your project for production:
 
 ```bash
-npm run build
+pnpm build
 ```
 
 Preview your build locally:
 
 ```bash
-npm run preview
+pnpm preview
 ```
 
 Deploy your project to Cloudflare Workers:
 
 ```bash
-npm run build && npm run deploy
+pnpm check && pnpm deploy
 ```
 
 Monitor your workers:
@@ -81,6 +81,44 @@ Monitor your workers:
 ```bash
 npx wrangler tail
 ```
+
+## Issue development workflow
+
+Development work is managed with one `issue/<number>` branch per GitHub Issue.
+The commands require [Task](https://taskfile.dev/) and authenticated
+[GitHub CLI](https://cli.github.com/). They refuse to continue when the working
+tree has uncommitted changes.
+
+Start an Issue. This updates `main`, checks unresolved Issue dependencies, creates
+a branch linked to the Issue, and checks it out:
+
+```bash
+task start:issue ISSUE=1
+```
+
+After committing the implementation, run the local quality checks, push the
+branch, and create a Draft Pull Request:
+
+```bash
+task create:pr
+```
+
+When the Pull Request is ready, rerun the checks, mark it ready, and enable squash
+auto-merge:
+
+```bash
+task ready:pr
+```
+
+After the Pull Request is merged, update `main` and delete the local Issue branch:
+
+```bash
+task clean:issue ISSUE=1
+```
+
+Pull Requests run `pnpm check` in GitHub Actions. Merging into `main` requires the
+`quality` check and uses squash merge. A merged Pull Request closes its Issue
+through the `Closes #<number>` reference added by `task create:pr`.
 
 ## Additional Resources
 

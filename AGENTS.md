@@ -60,3 +60,14 @@ If the application uses Durable Objects or Workflows, refer to the relevant best
 
 - Durable Objects: https://developers.cloudflare.com/durable-objects/best-practices/rules-of-durable-objects/
 - Workflows: https://developers.cloudflare.com/workflows/build/rules-of-workflows/
+
+## Issue development workflow
+
+- Treat GitHub Issues as the implementation task source of truth.
+- Start Issue work from a clean working tree with `task start:issue ISSUE=<number>`.
+- Use the generated `issue/<number>` branch. Do not create a worktree.
+- Keep implementation, relevant tests, and required specification updates in the same Pull Request.
+- After committing changes, use `task create:pr` to run checks and create a Draft Pull Request.
+- Use `task ready:pr` only when the Issue acceptance criteria are satisfied. It reruns checks and enables squash auto-merge.
+- After merge, use `task clean:issue ISSUE=<number>` to update `main` and remove the local branch.
+- Do not bypass the `quality` status check or force push `main`.
