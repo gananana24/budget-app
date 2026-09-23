@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createInterface } from "node:readline/promises";
 
 const DEFAULT_BRANCH = "main";
 
@@ -53,6 +54,22 @@ function issueNumber(value) {
 		fail("Issue番号を正の整数で指定してください。");
 	}
 	return Number(value);
+}
+
+async function requestedIssueNumber(value) {
+	if (value?.trim()) {
+		return issueNumber(value.trim());
+	}
+
+	const readline = createInterface({
+		input: process.stdin,
+		output: process.stdout,
+	});
+	try {
+		return issueNumber(await readline.question("Issue番号を入力してください: "));
+	} finally {
+		readline.close();
+	}
 }
 
 function currentBranch() {
@@ -294,17 +311,17 @@ function cleanIssue(number) {
 
 function usage() {
 	console.log(`使い方:
-  task start:issue ISSUE=<Issue番号>
+  task start:issue -- <Issue番号>
   task create:pr
   task ready:pr
-  task clean:issue ISSUE=<Issue番号>`);
+  task clean:issue -- <Issue番号>`);
 }
 
-try {
+async function main() {
 	const [command, argument] = process.argv.slice(2);
 	switch (command) {
 		case "start":
-			startIssue(issueNumber(argument));
+			startIssue(await requestedIssueNumber(argument));
 			break;
 		case "create-pr":
 			createPullRequest();
@@ -313,12 +330,14 @@ try {
 			readyPullRequest();
 			break;
 		case "clean":
-			cleanIssue(issueNumber(argument));
+			cleanIssue(await requestedIssueNumber(argument));
 			break;
 		default:
 			usage();
 			process.exitCode = 1;
 	}
-} catch (error) {
-	fail(error instanceof Error ? error.message : String(error));
 }
+
+main().catch((error) => {
+	fail(error instanceof Error ? error.message : String(error));
+});

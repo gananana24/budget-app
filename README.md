@@ -93,7 +93,7 @@ Start an Issue. This updates `main`, checks unresolved Issue dependencies, creat
 a branch linked to the Issue, and checks it out:
 
 ```bash
-task start:issue ISSUE=1
+task start:issue -- 1
 ```
 
 After committing the implementation, run the local quality checks, push the
@@ -113,7 +113,7 @@ task ready:pr
 After the Pull Request is merged, update `main` and delete the local Issue branch:
 
 ```bash
-task clean:issue ISSUE=1
+task clean:issue -- 1
 ```
 
 Pull Requests run `pnpm check` in GitHub Actions. Merging into `main` requires the

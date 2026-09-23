@@ -10,11 +10,8 @@ tasks:
 
   start:issue:
     desc: Update main and create a linked issue/<number> branch
-    requires:
-      vars:
-        - ISSUE
     cmds:
-      - node scripts/issue-workflow.mjs start {{.ISSUE}}
+      - node scripts/issue-workflow.mjs start {{.CLI_ARGS}}
 
   create:pr:
     desc: Check, push, and create a Draft Pull Request for the current Issue branch
@@ -28,8 +25,5 @@ tasks:
 
   clean:issue:
     desc: Update main and remove a merged local Issue branch
-    requires:
-      vars:
-        - ISSUE
     cmds:
-      - node scripts/issue-workflow.mjs clean {{.ISSUE}}
+      - node scripts/issue-workflow.mjs clean {{.CLI_ARGS}}
