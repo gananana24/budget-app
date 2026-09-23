@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { createInterface } from "node:readline/promises";
 
 const DEFAULT_BRANCH = "main";
+const REPOSITORY = "gananana24/budget-app";
 
 function run(command, args, options = {}) {
 	const result = spawnSync(command, args, {
@@ -95,6 +96,8 @@ function readIssue(number) {
 		"issue",
 		"view",
 		String(number),
+		"--repo",
+		REPOSITORY,
 		"--json",
 		"number,title,state,url,blockedBy,labels,milestone",
 	]);
@@ -155,6 +158,8 @@ function startIssue(number) {
 			"issue",
 			"develop",
 			String(number),
+			"--repo",
+			REPOSITORY,
 			"--base",
 			DEFAULT_BRANCH,
 			"--name",
@@ -172,6 +177,8 @@ function existingPullRequest(branch, state = "open") {
 	const json = output("gh", [
 		"pr",
 		"list",
+		"--repo",
+		REPOSITORY,
 		"--head",
 		branch,
 		"--state",
@@ -231,6 +238,8 @@ function createPullRequest() {
 	const args = [
 		"pr",
 		"create",
+		"--repo",
+		REPOSITORY,
 		"--draft",
 		"--base",
 		DEFAULT_BRANCH,
@@ -267,9 +276,17 @@ function readyPullRequest() {
 	runChecks();
 	run("git", ["push"]);
 	if (pullRequest.isDraft) {
-		run("gh", ["pr", "ready", String(pullRequest.number)]);
+		run("gh", ["pr", "ready", String(pullRequest.number), "--repo", REPOSITORY]);
 	}
-	run("gh", ["pr", "merge", String(pullRequest.number), "--auto", "--squash"]);
+	run("gh", [
+		"pr",
+		"merge",
+		String(pullRequest.number),
+		"--repo",
+		REPOSITORY,
+		"--auto",
+		"--squash",
+	]);
 
 	console.log(`\nPull RequestをReadyにし、auto-mergeを設定しました: ${pullRequest.url}`);
 	console.log(`マージ後、task clean:issue ISSUE=${number}を実行してください。`);
