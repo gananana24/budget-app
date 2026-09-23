@@ -167,6 +167,7 @@ function startIssue(number) {
 			"--checkout",
 		]);
 	}
+	run("git", ["push", "--set-upstream", "origin", branch]);
 
 	console.log(`\nStarted work on Issue #${number}.`);
 	console.log(`Branch: ${branch}`);
