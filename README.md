@@ -1,128 +1,102 @@
 # 家計簿アプリ
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/vite-react-template)
+React、TypeScript、Vite、Hono、Cloudflare Workersで開発する家計簿Webアプリです。
+スマートフォンでの利用を中心に、Googleログイン、支出の手入力、月次集計をMVPの対象にします。
 
-This template provides a minimal setup for building a React application with TypeScript and Vite, designed to run on Cloudflare Workers. It features hot module replacement, ESLint integration, and the flexibility of Workers deployments.
+## 必要な環境
 
-![React + TypeScript + Vite + Cloudflare Workers](https://imagedelivery.net/wSMYJvS3Xw-n339CbDyDIA/fc7b4b62-442b-4769-641b-ad4422d74300/public)
+- Node.js 24以上
+- pnpm 10以上
+- GitHub CLI（Issue開発ワークフローを使う場合）
+- Task（Issue開発ワークフローを使う場合）
 
-<!-- dash-content-start -->
+## セットアップ
 
-🚀 Supercharge your web development with this powerful stack:
-
-- [**React**](https://react.dev/) - A modern UI library for building interactive interfaces
-- [**Vite**](https://vite.dev/) - Lightning-fast build tooling and development server
-- [**Hono**](https://hono.dev/) - Ultralight, modern backend framework
-- [**Cloudflare Workers**](https://developers.cloudflare.com/workers/) - Edge computing platform for global deployment
-
-### ✨ Key Features
-
-- 🔥 Hot Module Replacement (HMR) for rapid development
-- 📦 TypeScript support out of the box
-- 🛠️ ESLint configuration included
-- ⚡ Zero-config deployment to Cloudflare's global network
-- 🎯 API routes with Hono's elegant routing
-- 🔄 Full-stack development setup
-- 🔎 Built-in Observability to monitor your Worker
-
-Get started in minutes with local development or deploy directly via the Cloudflare dashboard. Perfect for building modern, performant web applications at the edge.
-
-<!-- dash-content-end -->
-
-## Getting Started
-
-To start a new project with this template, run:
-
-```bash
-npm create cloudflare@latest -- --template=cloudflare/templates/vite-react-template
-```
-
-A live deployment of this template is available at:
-[https://react-vite-template.templates.workers.dev](https://react-vite-template.templates.workers.dev)
-
-## Development
-
-Install dependencies:
+依存関係をインストールします。
 
 ```bash
 pnpm install
 ```
 
-Start the development server with:
+環境変数を使う場合は、サンプルをコピーして値を設定します。
+
+```bash
+cp .env.example .env.local
+```
+
+`.env.example`には変数名と用途だけを記載しています。秘密値はコミットしないでください。
+現時点では認証・DB連携が未実装のため、ローカル起動に環境変数は必須ではありません。
+
+## 開発
+
+開発サーバーを起動します。
 
 ```bash
 pnpm dev
 ```
 
-Your application will be available at [http://localhost:5173](http://localhost:5173).
+ブラウザで <http://localhost:5173> を開きます。
 
-## Production
+主なコマンドは次のとおりです。
 
-Build your project for production:
+| コマンド | 用途 |
+| --- | --- |
+| `pnpm dev` | 開発サーバーを起動 |
+| `pnpm test` | テストを一度実行 |
+| `pnpm test:watch` | テストを監視モードで実行 |
+| `pnpm lint` | BiomeのLint・フォーマット検査 |
+| `pnpm lint:fix` | Biomeで自動修正 |
+| `pnpm typecheck` | TypeScriptの型検査 |
+| `pnpm build` | プロダクションビルド |
+| `pnpm check` | Lint、型検査、テスト、ビルド、Workers dry-run |
+| `pnpm preview` | ビルド結果をローカルで確認 |
+| `pnpm cf-typegen` | Cloudflare Workersの型定義を生成 |
+| `pnpm deploy` | Cloudflare Workersへデプロイ |
+
+## デプロイ
+
+Cloudflareへデプロイする前に、品質チェックを実行します。
 
 ```bash
-pnpm build
+pnpm check
+pnpm deploy
 ```
 
-Preview your build locally:
+認証やNeonを使う構成では、秘密値をCloudflareのSecretsへ登録します。
+秘密値をソースコードや`.env.example`へ書き込まないでください。
+
+## Issue開発ワークフロー
+
+Issueごとに`issue/<number>`ブランチを作成して開発します。
+以下のコマンドには、認証済みのGitHub CLIとTaskが必要です。
+
+Issueを開始します。番号を省略すると対話形式で入力できます。
 
 ```bash
-pnpm preview
-```
-
-Deploy your project to Cloudflare Workers:
-
-```bash
-pnpm check && pnpm deploy
-```
-
-Monitor your workers:
-
-```bash
-npx wrangler tail
-```
-
-## Issue development workflow
-
-Development work is managed with one `issue/<number>` branch per GitHub Issue.
-The commands require [Task](https://taskfile.dev/) and authenticated
-[GitHub CLI](https://cli.github.com/). They refuse to continue when the working
-tree has uncommitted changes.
-
-Start an Issue. This updates `main`, checks unresolved Issue dependencies, creates
-a branch linked to the Issue, and checks it out:
-
-```bash
+task start:issue
 task start:issue -- 1
 ```
 
-After committing the implementation, run the local quality checks, push the
-branch, and create a Draft Pull Request:
+実装後、チェック・push・Draft PR作成を行います。
 
 ```bash
 task create:pr
 ```
 
-When the Pull Request is ready, rerun the checks, mark it ready, and enable squash
-auto-merge:
+レビュー可能になったら、チェック・Ready化・squash auto-merge設定を行います。
 
 ```bash
 task ready:pr
 ```
 
-After the Pull Request is merged, update `main` and delete the local Issue branch:
+PRマージ後にmainを更新し、ローカルブランチを削除します。
 
 ```bash
 task clean:issue -- 1
 ```
 
-Pull Requests run `pnpm check` in GitHub Actions. Merging into `main` requires the
-`quality` check and uses squash merge. A merged Pull Request closes its Issue
-through the `Closes #<number>` reference added by `task create:pr`.
+## ドキュメント
 
-## Additional Resources
-
-- [Cloudflare Workers Documentation](https://developers.cloudflare.com/workers/)
-- [Vite Documentation](https://vitejs.dev/guide/)
-- [React Documentation](https://reactjs.org/)
-- [Hono Documentation](https://hono.dev/)
+- [MVP要件](docs/mvp-spec.md)
+- [技術構成](docs/tech-stack.md)
+- [MVP開発計画](docs/development-plan.md)
