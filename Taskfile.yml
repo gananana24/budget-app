@@ -11,19 +11,19 @@ tasks:
   start:issue:
     desc: Update main and create a linked issue/<number> branch
     cmds:
-      - node scripts/issue-workflow.mjs start {{.CLI_ARGS}}
+      - pnpm exec tsx scripts/issue-workflow.ts start {{.CLI_ARGS}}
 
   create:pr:
     desc: Check, push, and create a Draft Pull Request for the current Issue branch
     cmds:
-      - node scripts/issue-workflow.mjs create-pr
+      - pnpm exec tsx scripts/issue-workflow.ts create-pr
 
   ready:pr:
     desc: Check the current Pull Request and enable squash auto-merge
     cmds:
-      - node scripts/issue-workflow.mjs ready-pr
+      - pnpm exec tsx scripts/issue-workflow.ts ready-pr
 
   clean:issue:
     desc: Update main and remove a merged local Issue branch
     cmds:
-      - node scripts/issue-workflow.mjs clean {{.CLI_ARGS}}
+      - pnpm exec tsx scripts/issue-workflow.ts clean {{.CLI_ARGS}}

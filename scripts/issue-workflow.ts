@@ -7,7 +7,37 @@ import { createInterface } from "node:readline/promises";
 const DEFAULT_BRANCH = "main";
 const REPOSITORY = "gananana24/budget-app";
 
-function run(command, args, options = {}) {
+type RunOptions = {
+	cwd?: string;
+	capture?: boolean;
+	allowFailure?: boolean;
+};
+
+type CommandResult = {
+	status: number;
+	stdout: string;
+	stderr: string;
+};
+
+type Blocker = { number: number; state: string; title: string; url: string };
+type Issue = {
+	number: number;
+	title: string;
+	state: string;
+	url: string;
+	blockedBy: { nodes: Blocker[]; totalCount: number };
+	labels: { name: string }[];
+	milestone: { title: string } | null;
+};
+type PullRequest = {
+	number: number;
+	url: string;
+	state: string;
+	isDraft: boolean;
+	mergedAt: string | null;
+};
+
+function run(command: string, args: string[], options: RunOptions = {}): CommandResult {
 	const result = spawnSync(command, args, {
 		cwd: options.cwd,
 		encoding: "utf8",
@@ -31,12 +61,12 @@ function run(command, args, options = {}) {
 
 	return {
 		status: result.status ?? 1,
-		stdout: result.stdout?.trim() ?? "",
-		stderr: result.stderr?.trim() ?? "",
+		stdout: typeof result.stdout === "string" ? result.stdout.trim() : "",
+		stderr: typeof result.stderr === "string" ? result.stderr.trim() : "",
 	};
 }
 
-function output(command, args, options = {}) {
+function output(command: string, args: string[], options: RunOptions = {}): string {
 	return run(command, args, { ...options, capture: true }).stdout;
 }
 
@@ -45,19 +75,19 @@ const root = output("git", ["rev-parse", "--show-toplevel"], {
 });
 process.chdir(root);
 
-function fail(message) {
+function fail(message: string): never {
 	console.error(`\nError: ${message}`);
 	process.exit(1);
 }
 
-function issueNumber(value) {
+function issueNumber(value: string | undefined): number {
 	if (!/^\d+$/.test(value ?? "") || Number(value) < 1) {
 		fail("Enter a positive integer for the issue number.");
 	}
 	return Number(value);
 }
 
-async function requestedIssueNumber(value) {
+async function requestedIssueNumber(value: string | undefined): Promise<number> {
 	if (value?.trim()) {
 		return issueNumber(value.trim());
 	}
@@ -73,11 +103,11 @@ async function requestedIssueNumber(value) {
 	}
 }
 
-function currentBranch() {
+function currentBranch(): string {
 	return output("git", ["branch", "--show-current"]);
 }
 
-function branchFor(number) {
+function branchFor(number: number): string {
 	return `issue/${number}`;
 }
 
@@ -91,7 +121,7 @@ function ensureClean() {
 	}
 }
 
-function readIssue(number) {
+function readIssue(number: number): Issue {
 	const json = output("gh", [
 		"issue",
 		"view",
@@ -101,10 +131,10 @@ function readIssue(number) {
 		"--json",
 		"number,title,state,url,blockedBy,labels,milestone",
 	]);
-	return JSON.parse(json);
+	return JSON.parse(json) as Issue;
 }
 
-function issueNumberFromBranch() {
+function issueNumberFromBranch(): number {
 	const branch = currentBranch();
 	const match = /^issue\/(\d+)$/.exec(branch);
 	if (!match) {
@@ -115,12 +145,12 @@ function issueNumberFromBranch() {
 	return Number(match[1]);
 }
 
-function runChecks() {
+function runChecks(): void {
 	console.log("\nRunning quality checks.\n");
 	run("pnpm", ["check"]);
 }
 
-function startIssue(number) {
+function startIssue(number: number): void {
 	ensureClean();
 
 	const issue = readIssue(number);
@@ -174,7 +204,7 @@ function startIssue(number) {
 	console.log(`Issue: ${issue.url}`);
 }
 
-function existingPullRequest(branch, state = "open") {
+function existingPullRequest(branch: string, state = "open"): PullRequest | null {
 	const json = output("gh", [
 		"pr",
 		"list",
@@ -189,10 +219,10 @@ function existingPullRequest(branch, state = "open") {
 		"--json",
 		"number,url,state,isDraft,mergedAt",
 	]);
-	return JSON.parse(json)[0] ?? null;
+	return (JSON.parse(json) as PullRequest[])[0] ?? null;
 }
 
-function createPullRequest() {
+function createPullRequest(): void {
 	ensureClean();
 	const number = issueNumberFromBranch();
 	const branch = currentBranch();
@@ -265,7 +295,7 @@ function createPullRequest() {
 	}
 }
 
-function readyPullRequest() {
+function readyPullRequest(): void {
 	ensureClean();
 	const number = issueNumberFromBranch();
 	const branch = currentBranch();
@@ -293,7 +323,7 @@ function readyPullRequest() {
 	console.log(`After it merges, run task clean:issue -- ${number}.`);
 }
 
-function cleanIssue(number) {
+function cleanIssue(number: number): void {
 	ensureClean();
 	const branch = branchFor(number);
 	const activeBranch = currentBranch();
@@ -327,7 +357,7 @@ function cleanIssue(number) {
 	console.log(`Pull Request: ${pullRequest.url}`);
 }
 
-function usage() {
+function usage(): void {
 	console.log(`Usage:
   task start:issue -- <issue-number>
   task create:pr
