@@ -1,6 +1,7 @@
-import { Hono } from "hono";
-const app = new Hono<{ Bindings: Env }>();
+import { Hono } from "hono"
 
-app.get("/api/", (c) => c.json({ name: "Cloudflare" }));
+const app = new Hono<{ Bindings: Env }>()
 
-export default app;
+app.get("/api/", (c) => c.json({ name: "Cloudflare" }))
+
+export default app
