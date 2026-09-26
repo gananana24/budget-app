@@ -1,5 +1,11 @@
 # Cloudflare Workers
 
+## Project engineering rules
+
+- Before implementation or review, read `docs/programming-philosophy.md` and treat it as the project's design and coding decision criteria.
+- Before adding or changing tests, read `docs/testing-strategy.md` and follow its testing patterns, including the mandatory commented AAA structure.
+- If these rules conflict with a concrete product requirement, stop and confirm the intended trade-off instead of silently choosing one.
+
 STOP. Your knowledge of Cloudflare Workers APIs and limits may be outdated. Always retrieve current documentation before any Workers, KV, R2, D1, Durable Objects, Queues, Vectorize, AI, or Agents SDK task.
 
 ## Docs
