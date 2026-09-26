@@ -49,7 +49,7 @@ flowchart TB
 - `src/backend`配下の`domain`には支出・予算などの業務ルール、`application`にはユースケースと外部機能のインターフェース、`infrastructure`にはNeonの生SQLとClerk連携、`presentation/http`にはHono、`worker/index.ts`には依存関係の組み立てを置く。
 - MVPではDIコンテナを導入せず、`src/backend/worker/index.ts`で依存を明示的に組み立てる。テーブルごとの機械的なRepositoryは作らず、ユースケースが必要とするDB操作単位でインターフェースを定義する。
 - MVPはログイン後の利用を中心とし、検索エンジン向けの公開ページは作らない前提とする。
-- Googleログインとセッション管理にはClerkを使う。
+- Googleログインとセッション管理にはClerkを使う。MVP後も認証方法はGoogleだけとし、メール、パスワード、電話番号などの認証方式は追加しない。
 - 家計簿データの保存先にはNeonのPostgreSQLを使う。
 - DBアクセスにはORMを使わず、パラメータ化した生SQLをサーバー側で実行する。Drizzleは導入しない。
 - WorkerからのDBアクセスには`@neondatabase/serverless`のHTTP接続を使う。複数SQLをまとめる処理は`sql.transaction([...])`の非対話型トランザクションを使い、クエリ途中の結果をアプリケーションコードで判定して次のSQLを変える対話型トランザクションが必要になった場合は接続方式を再検討する。

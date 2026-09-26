@@ -19,19 +19,35 @@ React、TypeScript、Vite、Hono、Cloudflare Workersで開発する家計簿Web
 pnpm install
 ```
 
-環境変数を使う場合は、サンプルをコピーして値を設定します。
+ブラウザとマイグレーション用の環境変数、Worker用のsecretをそれぞれサンプルから作成します。
 
 ```bash
 cp .env.example .env
+cp .dev.vars.example .dev.vars
 ```
 
-`.env.example`には変数名と用途だけを記載しています。秘密値はコミットしないでください。
-現時点では認証と業務APIが未実装のため、画面の起動に環境変数は必須ではありません。バックエンドからNeonへ接続する処理では`DATABASE_URL`を使用します。
+`.env.example`と`.dev.vars.example`には変数名と用途だけを記載しています。実値はコミットしないでください。
+
+Clerk DashboardのDevelopment環境からPublishable KeyとSecret Keyを取得し、次のように設定します。Google以外の認証方法はClerk Dashboardで無効にしてください。
+
+```dotenv
+# .env: Viteがブラウザへ公開する値
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
+
+# .dev.vars: Workerだけが読む値
+CLERK_PUBLISHABLE_KEY=pk_test_...
+CLERK_SECRET_KEY=sk_test_...
+```
+
+`CLERK_SECRET_KEY`を`VITE_`で始まる変数へ設定しないでください。`VITE_`の値はブラウザへ組み込まれます。
 
 Neonを使う場合は、通常のアプリ接続にpooler URL、マイグレーションにdirect URLを設定します。
 
 ```dotenv
+# .dev.vars
 DATABASE_URL=postgresql://...-pooler.../neondb
+
+# .env
 DATABASE_URL_UNPOOLED=postgresql://.../neondb
 ```
 
@@ -102,7 +118,7 @@ pnpm check
 pnpm deploy
 ```
 
-認証やNeonを使う構成では、秘密値をCloudflareのSecretsへ登録します。
+認証やNeonを使う構成では、`CLERK_PUBLISHABLE_KEY`、`CLERK_SECRET_KEY`、`DATABASE_URL`をCloudflareのSecretsへ登録します。`VITE_CLERK_PUBLISHABLE_KEY`はフロントエンドのビルド環境へ設定します。
 秘密値をソースコードや`.env.example`へ書き込まないでください。
 
 ## Issue開発ワークフロー

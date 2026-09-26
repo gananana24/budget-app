@@ -13,11 +13,12 @@
     "publish": true
   },
   "dependencies": {
+    "@clerk/hono": "^0.1.82",
+    "@clerk/react": "^6.17.2",
     "@neondatabase/serverless": "^1.1.0",
-    "hono": "4.11.1",
-    "neon": "^5.0.1",
-    "react": "19.2.1",
-    "react-dom": "19.2.1"
+    "hono": "4.13.9",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.14",

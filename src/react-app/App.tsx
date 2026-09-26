@@ -1,42 +1,58 @@
-// src/App.tsx
-
-import { useState } from "react"
-import viteLogo from "/vite.svg"
-import cloudflareLogo from "./assets/Cloudflare_Logo.svg"
-import honoLogo from "./assets/hono.svg"
-import reactLogo from "./assets/react.svg"
+import { SignIn, UserButton, useAuth } from "@clerk/react"
 import "./App.css"
+import { AuthGate } from "./auth/auth-gate"
+
+function LoadingScreen() {
+	return (
+		<main className="auth-screen" aria-live="polite">
+			<p>セッションを確認しています</p>
+		</main>
+	)
+}
+
+function SignInScreen() {
+	return (
+		<main className="auth-screen">
+			<header className="auth-heading">
+				<p className="eyebrow">Budget App</p>
+				<h1>家計簿</h1>
+				<p>Googleアカウントでログインして、毎月の支出と予算を管理します。</p>
+			</header>
+			<SignIn routing="hash" />
+		</main>
+	)
+}
+
+function AuthenticatedApp() {
+	return (
+		<main className="app-shell">
+			<header className="app-header">
+				<div>
+					<p className="eyebrow">Budget App</p>
+					<h1>家計簿</h1>
+				</div>
+				<UserButton />
+			</header>
+			<section className="placeholder" aria-labelledby="welcome-heading">
+				<h2 id="welcome-heading">ログインしました</h2>
+				<p>家計簿の初期設定は次のステップで行います。</p>
+			</section>
+		</main>
+	)
+}
 
 function App() {
-	const [count, setCount] = useState(0)
+	const { isLoaded, isSignedIn } = useAuth()
 
 	return (
-		<>
-			<div>
-				<a href="https://vite.dev" target="_blank" rel="noopener">
-					<img src={viteLogo} className="logo" alt="Vite logo" />
-				</a>
-				<a href="https://react.dev" target="_blank" rel="noopener">
-					<img src={reactLogo} className="logo react" alt="React logo" />
-				</a>
-				<a href="https://hono.dev/" target="_blank" rel="noopener">
-					<img src={honoLogo} className="logo cloudflare" alt="Hono logo" />
-				</a>
-				<a href="https://workers.cloudflare.com/" target="_blank" rel="noopener">
-					<img src={cloudflareLogo} className="logo cloudflare" alt="Cloudflare logo" />
-				</a>
-			</div>
-			<h1>Vite + React + Hono + Cloudflare</h1>
-			<div className="card">
-				<button type="button" onClick={() => setCount((count) => count + 1)} aria-label="increment">
-					count is {count}
-				</button>
-				<p>
-					Edit <code>src/App.tsx</code> and save to test HMR
-				</p>
-			</div>
-			<p className="read-the-docs">Click on the logos to learn more</p>
-		</>
+		<AuthGate
+			isLoaded={isLoaded}
+			isSignedIn={isSignedIn}
+			loading={<LoadingScreen />}
+			signedOut={<SignInScreen />}
+		>
+			<AuthenticatedApp />
+		</AuthGate>
 	)
 }
 
