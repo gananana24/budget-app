@@ -1,0 +1,8 @@
+# Clerk key used by the Worker to verify sessions (safe to expose, but required at runtime)
+CLERK_PUBLISHABLE_KEY=
+
+# Clerk server-side secret key (keep this secret)
+CLERK_SECRET_KEY=
+
+# Neon PostgreSQL pooled connection string (keep this secret)
+DATABASE_URL=

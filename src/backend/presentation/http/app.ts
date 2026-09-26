@@ -1,13 +1,25 @@
-import { Hono } from "hono"
+import { Hono, type MiddlewareHandler } from "hono"
 import { ApplicationError } from "../../application/errors/application-error"
+import type { HttpEnvironment } from "./authentication"
 import {
 	applicationErrorResponse,
 	notFoundResponse,
 	unexpectedErrorResponse,
 } from "./error-response"
 
-export function createHttpApp(): Hono<{ Bindings: Env }> {
-	const app = new Hono<{ Bindings: Env }>()
+type HttpAppDependencies = Readonly<{
+	authenticationMiddleware: readonly [
+		MiddlewareHandler<HttpEnvironment>,
+		...MiddlewareHandler<HttpEnvironment>[],
+	]
+}>
+
+export function createHttpApp({
+	authenticationMiddleware,
+}: HttpAppDependencies): Hono<HttpEnvironment> {
+	const app = new Hono<HttpEnvironment>()
+
+	app.use("/api/*", ...authenticationMiddleware)
 
 	app.notFound(notFoundResponse)
 	app.onError((error, context) => {
