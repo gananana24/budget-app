@@ -4,6 +4,41 @@
 
 機能と運用上の要件は [MVP要件](./mvp-spec.md) にまとめる。
 
+## バックエンドの依存関係
+
+矢印は実行時の呼び出し順ではなく、ソースコードの依存方向を表す。依存は外側から内側だけへ向け、`domain`は他の層や外部サービスへ依存しない。
+
+```mermaid
+flowchart TB
+	 subgraph Backend["src/backend"]
+		direction TB
+		subgraph Outer["外側: Frameworks / Adapters"]
+			Worker["worker<br/>起動・依存関係の組み立て<br/>Cloudflare Workers"]
+			Presentation["presentation/http<br/>ルーティング・HTTP変換<br/>Hono"]
+			Infrastructure["infrastructure<br/>DB・認証アダプター<br/>Neon / Clerk"]
+			subgraph Application["application"]
+				UseCases["ユースケース<br/>外部機能のPort"]
+				subgraph Domain["domain"]
+					Rules["業務ルール・値"]
+				end
+			end
+		end
+
+		Worker --> Presentation
+		Worker --> Infrastructure
+		Worker --> UseCases
+		Presentation --> UseCases
+		Infrastructure -. "Portを実装" .-> UseCases
+		UseCases --> Rules
+	end
+```
+
+- `worker`はComposition Rootとして、必要な実装を生成して`presentation`へ渡す。
+- `presentation`はHTTPをアプリケーションの入力・出力へ変換し、業務ルールを直接実装しない。
+- `infrastructure`は`application`が定義したPortを実装し、NeonやClerkの詳細を内側へ漏らさない。
+- `application`はユースケースを調整し、`domain`の業務ルールを利用する。
+- `domain`は最も内側に置き、Hono、Clerk、Neon、Cloudflare Workersへ依存しない。
+
 ## 決定済み
 
 - 画面はReact＋Viteを使用し、TypeScriptで実装する。
@@ -11,8 +46,8 @@
 - Cloudflare WorkersのバックエンドもTypeScriptで実装する。フロントエンドと開発言語・型・検証処理を共有し、Clerkと`@neondatabase/serverless`のJavaScript向けSDKを直接利用する。
 - WorkerのHTTPフレームワークにはHonoを使い、`/api`のルーティング、認証ミドルウェア、入力検証、HTTPレスポンス変換、共通エラー処理を担当させる。
 - バックエンドは軽量なオニオンアーキテクチャとし、依存方向を`presentation/infrastructure -> application -> domain`に限定する。`domain`と`application`はHono、Clerk、Neon、Cloudflare WorkersのAPIへ直接依存しない。
-- `domain`には支出・予算などの業務ルール、`application`にはユースケースと外部機能のインターフェース、`infrastructure`にはNeonの生SQLとClerk連携、`presentation/http`にはHono、`worker/index.ts`には依存関係の組み立てを置く。
-- MVPではDIコンテナを導入せず、`worker/index.ts`で依存を明示的に組み立てる。テーブルごとの機械的なRepositoryは作らず、ユースケースが必要とするDB操作単位でインターフェースを定義する。
+- `src/backend`配下の`domain`には支出・予算などの業務ルール、`application`にはユースケースと外部機能のインターフェース、`infrastructure`にはNeonの生SQLとClerk連携、`presentation/http`にはHono、`worker/index.ts`には依存関係の組み立てを置く。
+- MVPではDIコンテナを導入せず、`src/backend/worker/index.ts`で依存を明示的に組み立てる。テーブルごとの機械的なRepositoryは作らず、ユースケースが必要とするDB操作単位でインターフェースを定義する。
 - MVPはログイン後の利用を中心とし、検索エンジン向けの公開ページは作らない前提とする。
 - Googleログインとセッション管理にはClerkを使う。
 - 家計簿データの保存先にはNeonのPostgreSQLを使う。

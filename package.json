@@ -13,6 +13,7 @@
     "publish": true
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
     "hono": "4.11.1",
     "neon": "^5.0.1",
     "react": "19.2.1",

@@ -2,7 +2,7 @@
 
 更新日: 2026-09-23
 
-機能要件は [MVP要件](./mvp-spec.md)、採用技術と設計判断は [技術構成](./tech-stack.md) を正とする。この文書は、MVPを実装して公開するまでの順序と、GitHub Issueで管理する実装単位を定める。
+機能要件は [MVP要件](./mvp-spec.md)、採用技術と設計判断は [技術構成](./tech-stack.md)、実装判断の原則は [プログラミング思想](./programming-philosophy.md)、テストの判断基準と記述規則は [テスト戦略](./testing-strategy.md) を正とする。この文書は、MVPを実装して公開するまでの順序と、GitHub Issueで管理する実装単位を定める。
 
 ## 開発方針
 
