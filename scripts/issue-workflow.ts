@@ -243,9 +243,21 @@ function createPullRequest(): void {
 	const directory = mkdtempSync(join(tmpdir(), "budget-app-pr-"))
 	const bodyPath = join(directory, "body.md")
 	const body = [
-		"## Changes",
+		"## Overview",
 		"",
-		"- Changes that address the Issue acceptance criteria",
+		"<!-- Explain the problem and outcome for a reviewer who has not read the specification. -->",
+		"",
+		"## Main changes",
+		"",
+		"<!-- Name the actual functions, modules, endpoints, and tables changed, and explain each responsibility. -->",
+		"",
+		"## Processing flow",
+		"",
+		"<!-- Explain the end-to-end flow. Use Mermaid when 3+ related steps, components, state changes, or branches benefit from a diagram. -->",
+		"",
+		"## Design decisions",
+		"",
+		"<!-- Explain the important choices and why they were made. -->",
 		"",
 		"## Verification",
 		"",

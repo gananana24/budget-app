@@ -74,6 +74,10 @@ If the application uses Durable Objects or Workflows, refer to the relevant best
 - Use the generated `issue/<number>` branch. Do not create a worktree.
 - Keep implementation, relevant tests, and required specification updates in the same Pull Request.
 - After committing changes, use `task create:pr` to run checks and create a Draft Pull Request.
+- Before handing a Pull Request to the user, replace the generated body placeholders with a reviewer-oriented explanation that can be understood without prior knowledge of the specification.
+- Pull Request bodies must explain the purpose, the main functions or modules created or changed and their responsibilities, the end-to-end processing flow, important design decisions, and verification performed.
+- Use a Mermaid diagram when three or more steps, components, dependencies, state changes, or branches are materially easier to understand visually. Keep simple changes in prose instead of adding a decorative diagram.
+- Write Pull Request bodies in concrete terms using actual function, module, endpoint, and table names. Do not leave generic template text or assume the Issue body alone explains the implementation.
 - Use `task ready:pr` only when the Issue acceptance criteria are satisfied. It reruns checks and enables squash auto-merge.
 - After merge, use `task clean:issue -- <number>` to update `main` and remove the local branch.
 - Do not bypass the `quality` status check or force push `main`.
