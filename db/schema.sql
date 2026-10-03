@@ -1,6 +1,6 @@
 \restrict dbmate
 
--- Dumped from database version 15.18 (Homebrew)
+-- Dumped from database version 15.18
 -- Dumped by pg_dump version 15.18 (Homebrew)
 
 SET statement_timeout = 0;
@@ -78,7 +78,6 @@ CREATE TABLE public.categories (
     household_id uuid NOT NULL,
     name text NOT NULL,
     seed_key text,
-    hidden_at timestamp with time zone,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT categories_name_check CHECK ((((char_length(name) >= 1) AND (char_length(name) <= 50)) AND (name !~ '^[[:space:]]'::text) AND (name !~ '[[:space:]]$'::text))),
@@ -210,6 +209,14 @@ ALTER TABLE ONLY public.household_members
 
 
 --
+-- Name: households households_personal_owner_user_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.households
+    ADD CONSTRAINT households_personal_owner_user_id_key UNIQUE (personal_owner_user_id);
+
+
+--
 -- Name: households households_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -278,6 +285,13 @@ CREATE INDEX household_members_user_id_idx ON public.household_members USING btr
 
 
 --
+-- Name: households households_seed_default_categories; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER households_seed_default_categories AFTER INSERT ON public.households FOR EACH ROW EXECUTE FUNCTION public.seed_default_categories_for_household();
+
+
+--
 -- Name: budget_periods budget_periods_household_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -298,7 +312,7 @@ ALTER TABLE ONLY public.categories
 --
 
 ALTER TABLE ONLY public.expenses
-    ADD CONSTRAINT expenses_household_id_category_id_fkey FOREIGN KEY (household_id, category_id) REFERENCES public.categories(household_id, id);
+    ADD CONSTRAINT expenses_household_id_category_id_fkey FOREIGN KEY (household_id, category_id) REFERENCES public.categories(household_id, id) ON DELETE SET NULL (category_id);
 
 
 --
@@ -338,7 +352,7 @@ ALTER TABLE ONLY public.households
 --
 
 ALTER TABLE ONLY public.monthly_budgets
-    ADD CONSTRAINT monthly_budgets_household_id_category_id_fkey FOREIGN KEY (household_id, category_id) REFERENCES public.categories(household_id, id);
+    ADD CONSTRAINT monthly_budgets_household_id_category_id_fkey FOREIGN KEY (household_id, category_id) REFERENCES public.categories(household_id, id) ON DELETE CASCADE;
 
 
 --
@@ -347,13 +361,6 @@ ALTER TABLE ONLY public.monthly_budgets
 
 ALTER TABLE ONLY public.monthly_budgets
     ADD CONSTRAINT monthly_budgets_household_id_month_start_fkey FOREIGN KEY (household_id, month_start) REFERENCES public.budget_periods(household_id, month_start) ON DELETE CASCADE;
-
-
---
--- Name: households households_seed_default_categories; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER households_seed_default_categories AFTER INSERT ON public.households FOR EACH ROW EXECUTE FUNCTION public.seed_default_categories_for_household();
 
 
 --

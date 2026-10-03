@@ -11,6 +11,7 @@ describe("HTTP app", () => {
 	function createAuthenticatedApp() {
 		return createHttpApp({
 			authenticationMiddleware: [createAuthenticatedUserMiddleware(() => "clerk_user_verified")],
+			bootstrap: async () => ({ userId: "user-id", householdId: "household-id" }),
 		})
 	}
 
@@ -18,6 +19,7 @@ describe("HTTP app", () => {
 		["VALIDATION_ERROR", 400],
 		["UNAUTHORIZED", 401],
 		["NOT_FOUND", 404],
+		["BOOTSTRAP_REQUIRED", 409],
 		["CONFLICT", 409],
 	] as const)("maps %s to the common error response", async (code, status) => {
 		// Arrange
@@ -78,6 +80,7 @@ describe("HTTP app", () => {
 		// Arrange
 		const app = createHttpApp({
 			authenticationMiddleware: [createAuthenticatedUserMiddleware(() => null)],
+			bootstrap: async () => ({ userId: "user-id", householdId: "household-id" }),
 		})
 
 		// Act
@@ -94,6 +97,7 @@ describe("HTTP app", () => {
 		// Arrange
 		const app = createHttpApp({
 			authenticationMiddleware: [createAuthenticatedUserMiddleware(() => null)],
+			bootstrap: async () => ({ userId: "user-id", householdId: "household-id" }),
 		})
 
 		// Act
@@ -125,5 +129,34 @@ describe("HTTP app", () => {
 		// Assert
 		expect(response.status).toBe(200)
 		expect(await response.json()).toEqual({ clerkUserId: "clerk_user_verified" })
+	})
+
+	it("bootstraps the verified Clerk user without returning internal IDs", async () => {
+		// Arrange
+		let bootstrappedClerkUserId: string | undefined
+		const app = createHttpApp({
+			authenticationMiddleware: [createAuthenticatedUserMiddleware(() => "clerk_user_verified")],
+			bootstrap: async (user) => {
+				bootstrappedClerkUserId = user.clerkUserId
+				return { userId: "user-id", householdId: "household-id" }
+			},
+		})
+		const request = new Request("http://localhost/api/bootstrap", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({
+				clerkUserId: "clerk_user_spoofed",
+				householdId: "household_spoofed",
+				month: "2000-01-01",
+			}),
+		})
+
+		// Act
+		const response = await app.request(request)
+
+		// Assert
+		expect(response.status).toBe(204)
+		expect(await response.text()).toBe("")
+		expect(bootstrappedClerkUserId).toBe("clerk_user_verified")
 	})
 })

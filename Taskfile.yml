@@ -2,11 +2,60 @@
 
 version: '3'
 
+vars:
+  DEV_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/budget_app_dev?sslmode=disable
+  TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/budget_app_test?sslmode=disable
+
 tasks:
   default:
     desc: Show available development workflow tasks
     cmds:
       - task --list
+
+  db:start:
+    desc: Start the local PostgreSQL container
+    cmds:
+      - docker compose up -d --wait postgres
+
+  db:stop:
+    desc: Stop the local PostgreSQL container without deleting data
+    cmds:
+      - docker compose stop postgres
+
+  db:reset:
+    desc: Recreate the local development and test databases
+    cmds:
+      - docker compose down --volumes
+      - task db:start
+      - task db:migrate
+      - task db:migrate:test
+
+  db:migrate:
+    desc: Apply migrations to the local development database
+    cmds:
+      - pnpm exec dbmate --url '{{.DEV_DATABASE_URL}}' --no-dump-schema up
+
+  db:migrate:test:
+    desc: Apply migrations to the local test database
+    cmds:
+      - pnpm exec dbmate --url '{{.TEST_DATABASE_URL}}' --no-dump-schema up
+
+  db:dump:
+    desc: Regenerate db/schema.sql from the local development database
+    cmds:
+      - pnpm exec dbmate --url '{{.DEV_DATABASE_URL}}' dump
+
+  db:status:
+    desc: Show local development database migration status
+    cmds:
+      - pnpm exec dbmate --url '{{.DEV_DATABASE_URL}}' --no-dump-schema status
+
+  dev:
+    desc: Start the database, apply migrations, and run the app locally
+    cmds:
+      - task: db:start
+      - task: db:migrate
+      - pnpm dev
 
   start:issue:
     desc: Update main and create a linked issue/<number> branch

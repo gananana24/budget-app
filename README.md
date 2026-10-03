@@ -7,6 +7,7 @@ React、TypeScript、Vite、Hono、Cloudflare Workersで開発する家計簿Web
 
 - Node.js 24以上
 - pnpm 10以上
+- Docker DesktopまたはColimaなど、Docker Composeを実行できる環境
 - 接続先と同じメジャーバージョンのPostgreSQLクライアントツール（スキーマダンプを更新する場合）
 - GitHub CLI（Issue開発ワークフローを使う場合）
 - Task（Issue開発ワークフローを使う場合）
@@ -19,7 +20,7 @@ React、TypeScript、Vite、Hono、Cloudflare Workersで開発する家計簿Web
 pnpm install
 ```
 
-ブラウザとマイグレーション用の環境変数、Worker用のsecretをそれぞれサンプルから作成します。
+ブラウザ・ローカルHyperdrive・結合テスト用の環境変数と、Worker用のsecretをそれぞれサンプルから作成します。
 
 ```bash
 cp .env.example .env
@@ -41,24 +42,14 @@ CLERK_SECRET_KEY=sk_test_...
 
 `CLERK_SECRET_KEY`を`VITE_`で始まる変数へ設定しないでください。`VITE_`の値はブラウザへ組み込まれます。
 
-Neonを使う場合は、通常のアプリ接続にpooler URL、マイグレーションにdirect URLを設定します。
-
-```dotenv
-# .dev.vars
-DATABASE_URL=postgresql://...-pooler.../neondb
-
-# .env
-DATABASE_URL_UNPOOLED=postgresql://.../neondb
-```
-
-ローカルPostgreSQLでは、両方に同じdirect URLを設定して構いません。
+ローカルDBはDocker上のPostgreSQLを使います。`.env.example`の接続先は、開発DBを`budget_app_dev`、結合テストDBを`budget_app_test`として分離済みです。既存のローカルPostgreSQLと衝突しないよう、ホスト側ではポート`54322`を使用します。
 
 ## 開発
 
-開発サーバーを起動します。
+DBの起動とmigrationを行ってから開発サーバーを起動します。
 
 ```bash
-pnpm dev
+task dev
 ```
 
 ブラウザで <http://localhost:5173> を開きます。
@@ -67,6 +58,14 @@ pnpm dev
 
 | コマンド | 用途 |
 | --- | --- |
+| `task db:start` | ローカルPostgreSQLを起動 |
+| `task db:stop` | データを残してローカルPostgreSQLを停止 |
+| `task db:reset` | 開発・テストDBを作り直してmigrationを適用（保存データを削除） |
+| `task db:migrate` | 開発DBへmigrationを適用 |
+| `task db:migrate:test` | テストDBへmigrationを適用 |
+| `task db:status` | 開発DBのmigration状態を確認 |
+| `task db:dump` | 開発DBから`db/schema.sql`を再生成 |
+| `task dev` | DB起動・migration・開発サーバー起動を順に実行 |
 | `pnpm dev` | 開発サーバーを起動 |
 | `pnpm test` | テストを一度実行 |
 | `pnpm test:watch` | テストを監視モードで実行 |
@@ -81,33 +80,35 @@ pnpm dev
 
 ## データベース
 
-マイグレーションはdbmateで管理します。Neonでは必ずホスト名に`-pooler`を含まない`DATABASE_URL_UNPOOLED`を使用してください。
+マイグレーションはdbmate、ローカルDB操作はTaskで管理します。Taskはリポジトリの`.env`にある別接続先を読まず、Dockerの開発DBを明示的に使用します。
 
 適用状態を確認します。
 
 ```bash
-pnpx dbmate --env DATABASE_URL_UNPOOLED --no-dump-schema status
+task db:status
 ```
 
 未適用のマイグレーションを適用します。
 
 ```bash
-pnpx dbmate --env DATABASE_URL_UNPOOLED --no-dump-schema up
+task db:migrate
 ```
 
-最新のマイグレーションをロールバックします。対象テーブルのデータも削除されるため、実行前に接続先を確認してください。
+開発・テストDBを空から作り直す場合は次を実行します。保存データとDocker volumeが削除されるため、必要な場合だけ使ってください。
 
 ```bash
-pnpx dbmate --env DATABASE_URL_UNPOOLED --no-dump-schema down
+task db:reset
 ```
 
 `--no-dump-schema`は、マイグレーション後の自動ダンプを無効にします。`db/schema.sql`を更新するときは、接続先と同じメジャーバージョンの`pg_dump`を用意して次を実行します。
 
 ```bash
-pnpx dbmate --env DATABASE_URL_UNPOOLED dump
+task db:dump
 ```
 
 マイグレーションは開発時またはデプロイ工程で明示的に実行します。Cloudflare Workerの起動時やリクエスト処理中には実行しません。
+
+本番Workerは`DATABASE` Hyperdrive bindingを通してNeonへ接続します。Hyperdriveのクエリキャッシュは無効にし、書き込み直後の認可・家計データを常にDBから取得します。ローカルでは`.env`の`CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_DATABASE`が同じbindingをDocker PostgreSQLへ向けます。
 
 ## デプロイ
 
@@ -118,7 +119,7 @@ pnpm check
 pnpm deploy
 ```
 
-認証やNeonを使う構成では、`CLERK_PUBLISHABLE_KEY`、`CLERK_SECRET_KEY`、`DATABASE_URL`をCloudflareのSecretsへ登録します。`VITE_CLERK_PUBLISHABLE_KEY`はフロントエンドのビルド環境へ設定します。
+Cloudflareには`CLERK_PUBLISHABLE_KEY`と`CLERK_SECRET_KEY`をSecretsとして登録し、作成済みのHyperdriveを`DATABASE` bindingへ設定します。`VITE_CLERK_PUBLISHABLE_KEY`はフロントエンドのビルド環境へ設定します。
 秘密値をソースコードや`.env.example`へ書き込まないでください。
 
 ## Issue開発ワークフロー

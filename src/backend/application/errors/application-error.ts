@@ -1,4 +1,9 @@
-export type ApplicationErrorCode = "CONFLICT" | "NOT_FOUND" | "UNAUTHORIZED" | "VALIDATION_ERROR"
+export type ApplicationErrorCode =
+	| "BOOTSTRAP_REQUIRED"
+	| "CONFLICT"
+	| "NOT_FOUND"
+	| "UNAUTHORIZED"
+	| "VALIDATION_ERROR"
 
 export class ApplicationError extends Error {
 	readonly code: ApplicationErrorCode

@@ -10,7 +10,7 @@ CREATE TABLE public.users (
 
 CREATE TABLE public.households (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  personal_owner_user_id uuid NOT NULL
+  personal_owner_user_id uuid NOT NULL UNIQUE
     REFERENCES public.users(id) ON DELETE NO ACTION,
   created_at timestamptz NOT NULL DEFAULT now()
 );
@@ -47,7 +47,6 @@ CREATE TABLE public.categories (
         'other'
       )
     ),
-  hidden_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (household_id, id)
@@ -77,7 +76,7 @@ CREATE TABLE public.expenses (
   UNIQUE (household_id, id),
   FOREIGN KEY (household_id, category_id)
     REFERENCES public.categories(household_id, id)
-    ON DELETE NO ACTION
+    ON DELETE SET NULL (category_id)
 );
 
 CREATE TABLE public.monthly_budgets (
@@ -95,7 +94,7 @@ CREATE TABLE public.monthly_budgets (
     ON DELETE CASCADE,
   FOREIGN KEY (household_id, category_id)
     REFERENCES public.categories(household_id, id)
-    ON DELETE NO ACTION
+    ON DELETE CASCADE
 );
 
 CREATE UNIQUE INDEX categories_household_lower_name_idx

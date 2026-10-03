@@ -20,6 +20,7 @@ export function applicationErrorResponse(error: ApplicationError, context: Conte
 			return context.json(errorBody(error.code, error.fields), 404)
 		case "UNAUTHORIZED":
 			return context.json(errorBody(error.code, error.fields), 401)
+		case "BOOTSTRAP_REQUIRED":
 		case "CONFLICT":
 			return context.json(errorBody(error.code, error.fields), 409)
 	}
