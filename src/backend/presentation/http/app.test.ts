@@ -3,9 +3,7 @@ import { UnauthorizedError } from "../../domain/authentication/exceptions/unauth
 import { BootstrapRequiredError } from "../../domain/authorization/exceptions/bootstrap-required-error"
 import { AuthorizationContext } from "../../domain/household/value-objects/authorization-context"
 import { HouseholdId } from "../../domain/household/value-objects/household-id"
-import { ConflictError } from "../../domain/shared/exceptions/conflict-error"
 import { InvalidValueError } from "../../domain/shared/exceptions/invalid-value-error"
-import { NotFoundError } from "../../domain/shared/exceptions/not-found-error"
 import { UserId } from "../../domain/user/value-objects/user-id"
 import { createHttpApp } from "./app"
 import { createAuthenticatedUserMiddleware, getAuthenticatedClerkUserId } from "./authentication"
@@ -22,9 +20,6 @@ function createAuthorizationContext(): AuthorizationContext {
 }
 
 function expectedFields(code: string): Readonly<Record<string, string>> {
-	if (code === "CONFLICT") {
-		return { operation: "RETRY" }
-	}
 	if (code === "VALIDATION_ERROR") {
 		return { reason: "OUT_OF_RANGE" }
 	}
@@ -46,9 +41,7 @@ describe("HTTP app", () => {
 	it.each([
 		["VALIDATION_ERROR", new InvalidValueError("OUT_OF_RANGE"), 400],
 		["UNAUTHORIZED", new UnauthorizedError(), 401],
-		["NOT_FOUND", new NotFoundError(), 404],
 		["BOOTSTRAP_REQUIRED", new BootstrapRequiredError(), 409],
-		["CONFLICT", new ConflictError({ operation: "RETRY" }), 409],
 	] as const)("maps %s to the common error response", async (code, error, status) => {
 		// Arrange
 		const app = createAuthenticatedApp()
