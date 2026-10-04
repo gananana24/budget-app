@@ -42,7 +42,7 @@ CLERK_SECRET_KEY=sk_test_...
 
 `CLERK_SECRET_KEY`を`VITE_`で始まる変数へ設定しないでください。`VITE_`の値はブラウザへ組み込まれます。
 
-ローカルDBはDocker上のPostgreSQLを使います。`.env.example`の接続先は、開発DBを`budget_app_dev`、結合テストDBを`budget_app_test`として分離済みです。既存のローカルPostgreSQLと衝突しないよう、ホスト側ではポート`54322`を使用します。
+ローカルDBはDocker上のPostgreSQLを使います。`wrangler.json`の`localConnectionString`は開発DBを`budget_app_dev`へ向け、`.env.example`の`TEST_DATABASE_URL`は結合テストDBを`budget_app_test`へ向けています。既存のローカルPostgreSQLと衝突しないよう、ホスト側ではポート`54322`を使用します。
 
 ## 開発
 
@@ -108,7 +108,7 @@ task db:dump
 
 マイグレーションは開発時またはデプロイ工程で明示的に実行します。Cloudflare Workerの起動時やリクエスト処理中には実行しません。
 
-本番Workerは`DATABASE` Hyperdrive bindingを通してNeonへ接続します。Hyperdriveのクエリキャッシュは無効にし、書き込み直後の認可・家計データを常にDBから取得します。ローカルでは`.env`の`CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_DATABASE`が同じbindingをDocker PostgreSQLへ向けます。
+本番Workerは`DATABASE` Hyperdrive bindingを通してNeonへ接続します。Hyperdriveのクエリキャッシュは無効にし、書き込み直後の認可・家計データを常にDBから取得します。ローカルでは`wrangler.json`の`localConnectionString`が同じbindingをDocker PostgreSQLへ向けます。別の接続先を一時的に使う場合は、公式の`CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_DATABASE`環境変数で上書きできます。
 
 ## デプロイ
 

@@ -1,31 +1,59 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { ApplicationError } from "../../application/errors/application-error"
+import { UnauthorizedError } from "../../domain/authentication/exceptions/unauthorized-error"
+import { BootstrapRequiredError } from "../../domain/authorization/exceptions/bootstrap-required-error"
+import { AuthorizationContext } from "../../domain/household/value-objects/authorization-context"
+import { HouseholdId } from "../../domain/household/value-objects/household-id"
+import { ConflictError } from "../../domain/shared/exceptions/conflict-error"
+import { InvalidValueError } from "../../domain/shared/exceptions/invalid-value-error"
+import { NotFoundError } from "../../domain/shared/exceptions/not-found-error"
+import { UserId } from "../../domain/user/value-objects/user-id"
 import { createHttpApp } from "./app"
-import { createAuthenticatedUserMiddleware, getAuthenticatedUser } from "./authentication"
+import { createAuthenticatedUserMiddleware, getAuthenticatedClerkUserId } from "./authentication"
 
 afterEach(() => {
 	vi.restoreAllMocks()
 })
 
+function createAuthorizationContext(): AuthorizationContext {
+	return new AuthorizationContext(
+		UserId.from("00000000-0000-4000-8000-000000000001"),
+		HouseholdId.from("00000000-0000-4000-8000-000000000002"),
+	)
+}
+
+function expectedFields(code: string): Readonly<Record<string, string>> {
+	if (code === "CONFLICT") {
+		return { operation: "RETRY" }
+	}
+	if (code === "VALIDATION_ERROR") {
+		return { reason: "OUT_OF_RANGE" }
+	}
+	return {}
+}
+
 describe("HTTP app", () => {
 	function createAuthenticatedApp() {
 		return createHttpApp({
 			authenticationMiddleware: [createAuthenticatedUserMiddleware(() => "clerk_user_verified")],
-			bootstrap: async () => ({ userId: "user-id", householdId: "household-id" }),
+			bootstrapUseCase: {
+				execute: async () => {
+					throw new Error("Bootstrap is not expected in this test")
+				},
+			},
 		})
 	}
 
 	it.each([
-		["VALIDATION_ERROR", 400],
-		["UNAUTHORIZED", 401],
-		["NOT_FOUND", 404],
-		["BOOTSTRAP_REQUIRED", 409],
-		["CONFLICT", 409],
-	] as const)("maps %s to the common error response", async (code, status) => {
+		["VALIDATION_ERROR", new InvalidValueError("OUT_OF_RANGE"), 400],
+		["UNAUTHORIZED", new UnauthorizedError(), 401],
+		["NOT_FOUND", new NotFoundError(), 404],
+		["BOOTSTRAP_REQUIRED", new BootstrapRequiredError(), 409],
+		["CONFLICT", new ConflictError({ operation: "RETRY" }), 409],
+	] as const)("maps %s to the common error response", async (code, error, status) => {
 		// Arrange
 		const app = createAuthenticatedApp()
 		app.get("/api/error", () => {
-			throw new ApplicationError(code, { operation: "RETRY" })
+			throw error
 		})
 
 		// Act
@@ -33,9 +61,7 @@ describe("HTTP app", () => {
 
 		// Assert
 		expect(response.status).toBe(status)
-		expect(await response.json()).toEqual({
-			error: { code, fields: { operation: "RETRY" } },
-		})
+		expect(await response.json()).toEqual({ error: { code, fields: expectedFields(code) } })
 	})
 
 	it("converts an unknown route to the common not-found response", async () => {
@@ -80,7 +106,11 @@ describe("HTTP app", () => {
 		// Arrange
 		const app = createHttpApp({
 			authenticationMiddleware: [createAuthenticatedUserMiddleware(() => null)],
-			bootstrap: async () => ({ userId: "user-id", householdId: "household-id" }),
+			bootstrapUseCase: {
+				execute: async () => {
+					throw new Error("Bootstrap is not expected in this test")
+				},
+			},
 		})
 
 		// Act
@@ -93,11 +123,36 @@ describe("HTTP app", () => {
 		})
 	})
 
+	it("rejects a malformed authenticated user ID as unauthorized", async () => {
+		// Arrange
+		const app = createHttpApp({
+			authenticationMiddleware: [createAuthenticatedUserMiddleware(() => "   ")],
+			bootstrapUseCase: {
+				execute: async () => {
+					throw new Error("Bootstrap is not expected in this test")
+				},
+			},
+		})
+
+		// Act
+		const response = await app.request("/api/bootstrap", { method: "POST" })
+
+		// Assert
+		expect(response.status).toBe(401)
+		expect(await response.json()).toEqual({
+			error: { code: "UNAUTHORIZED", fields: {} },
+		})
+	})
+
 	it("leaves non-API routes public for the application shell", async () => {
 		// Arrange
 		const app = createHttpApp({
 			authenticationMiddleware: [createAuthenticatedUserMiddleware(() => null)],
-			bootstrap: async () => ({ userId: "user-id", householdId: "household-id" }),
+			bootstrapUseCase: {
+				execute: async () => {
+					throw new Error("Bootstrap is not expected in this test")
+				},
+			},
 		})
 
 		// Act
@@ -113,7 +168,9 @@ describe("HTTP app", () => {
 	it("uses the verified Clerk user instead of a client-provided user ID", async () => {
 		// Arrange
 		const app = createAuthenticatedApp()
-		app.post("/api/protected", (context) => context.json(getAuthenticatedUser(context)))
+		app.post("/api/protected", (context) =>
+			context.json({ clerkUserId: getAuthenticatedClerkUserId(context).value }),
+		)
 		const request = new Request("http://localhost/api/protected", {
 			method: "POST",
 			headers: {
@@ -136,9 +193,11 @@ describe("HTTP app", () => {
 		let bootstrappedClerkUserId: string | undefined
 		const app = createHttpApp({
 			authenticationMiddleware: [createAuthenticatedUserMiddleware(() => "clerk_user_verified")],
-			bootstrap: async (user) => {
-				bootstrappedClerkUserId = user.clerkUserId
-				return { userId: "user-id", householdId: "household-id" }
+			bootstrapUseCase: {
+				execute: async (clerkUserId) => {
+					bootstrappedClerkUserId = clerkUserId.value
+					return createAuthorizationContext()
+				},
 			},
 		})
 		const request = new Request("http://localhost/api/bootstrap", {

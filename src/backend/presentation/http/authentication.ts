@@ -1,11 +1,12 @@
 import type { Context, MiddlewareHandler } from "hono"
-import type { AuthenticatedUser } from "../../application/auth/authenticated-user"
-import { ApplicationError } from "../../application/errors/application-error"
+import { UnauthorizedError } from "../../domain/authentication/exceptions/unauthorized-error"
+import { InvalidValueError } from "../../domain/shared/exceptions/invalid-value-error"
+import { ClerkUserId } from "../../domain/user/value-objects/clerk-user-id"
 
 export type HttpEnvironment = {
 	Bindings: Env
 	Variables: {
-		authenticatedUser: AuthenticatedUser
+		clerkUserId: ClerkUserId
 	}
 }
 
@@ -19,14 +20,21 @@ export function createAuthenticatedUserMiddleware(
 	return async (context, next) => {
 		const clerkUserId = await resolveClerkUserId(context)
 		if (!clerkUserId) {
-			throw new ApplicationError("UNAUTHORIZED")
+			throw new UnauthorizedError()
 		}
 
-		context.set("authenticatedUser", { clerkUserId })
+		try {
+			context.set("clerkUserId", ClerkUserId.from(clerkUserId))
+		} catch (error) {
+			if (error instanceof InvalidValueError) {
+				throw new UnauthorizedError()
+			}
+			throw error
+		}
 		await next()
 	}
 }
 
-export function getAuthenticatedUser(context: Context<HttpEnvironment>): AuthenticatedUser {
-	return context.get("authenticatedUser")
+export function getAuthenticatedClerkUserId(context: Context<HttpEnvironment>): ClerkUserId {
+	return context.get("clerkUserId")
 }
