@@ -26,6 +26,19 @@ function expectedFields(code: string): Readonly<Record<string, string>> {
 	return {}
 }
 
+function expectedMessage(code: string): string {
+	switch (code) {
+		case "VALIDATION_ERROR":
+			return "入力内容を確認してください。"
+		case "UNAUTHORIZED":
+			return "ログインを確認できませんでした。もう一度ログインしてからお試しください。"
+		case "BOOTSTRAP_REQUIRED":
+			return "家計簿の準備が完了していません。"
+		default:
+			throw new Error(`Unexpected test error code: ${code}`)
+	}
+}
+
 describe("HTTP app", () => {
 	function createAuthenticatedApp() {
 		return createHttpApp({
@@ -54,7 +67,9 @@ describe("HTTP app", () => {
 
 		// Assert
 		expect(response.status).toBe(status)
-		expect(await response.json()).toEqual({ error: { code, fields: expectedFields(code) } })
+		expect(await response.json()).toEqual({
+			error: { code, message: expectedMessage(code), fields: expectedFields(code) },
+		})
 	})
 
 	it("converts an unknown route to the common not-found response", async () => {
@@ -67,7 +82,11 @@ describe("HTTP app", () => {
 		// Assert
 		expect(response.status).toBe(404)
 		expect(await response.json()).toEqual({
-			error: { code: "NOT_FOUND", fields: {} },
+			error: {
+				code: "NOT_FOUND",
+				message: "指定された情報が見つかりませんでした。",
+				fields: {},
+			},
 		})
 	})
 
@@ -89,7 +108,11 @@ describe("HTTP app", () => {
 
 		expect(response.status).toBe(500)
 		expect(JSON.parse(body)).toEqual({
-			error: { code: "INTERNAL_ERROR", fields: {} },
+			error: {
+				code: "INTERNAL_ERROR",
+				message: "処理を完了できませんでした。しばらくしてから、もう一度お試しください。",
+				fields: {},
+			},
 		})
 		expect(body).not.toContain(secret)
 		expect(log).not.toContain(secret)
@@ -112,7 +135,11 @@ describe("HTTP app", () => {
 		// Assert
 		expect(response.status).toBe(401)
 		expect(await response.json()).toEqual({
-			error: { code: "UNAUTHORIZED", fields: {} },
+			error: {
+				code: "UNAUTHORIZED",
+				message: "ログインを確認できませんでした。もう一度ログインしてからお試しください。",
+				fields: {},
+			},
 		})
 	})
 
@@ -133,7 +160,11 @@ describe("HTTP app", () => {
 		// Assert
 		expect(response.status).toBe(401)
 		expect(await response.json()).toEqual({
-			error: { code: "UNAUTHORIZED", fields: {} },
+			error: {
+				code: "UNAUTHORIZED",
+				message: "ログインを確認できませんでした。もう一度ログインしてからお試しください。",
+				fields: {},
+			},
 		})
 	})
 
@@ -154,7 +185,11 @@ describe("HTTP app", () => {
 		// Assert
 		expect(response.status).toBe(404)
 		expect(await response.json()).toEqual({
-			error: { code: "NOT_FOUND", fields: {} },
+			error: {
+				code: "NOT_FOUND",
+				message: "指定された情報が見つかりませんでした。",
+				fields: {},
+			},
 		})
 	})
 

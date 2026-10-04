@@ -2,16 +2,18 @@ import type { Context } from "hono"
 import { UnauthorizedError } from "../../domain/authentication/exceptions/unauthorized-error"
 import { BootstrapRequiredError } from "../../domain/authorization/exceptions/bootstrap-required-error"
 import { InvalidValueError } from "../../domain/shared/exceptions/invalid-value-error"
+import { type ErrorCode, errorMessages } from "./error-messages"
 
 type ErrorBody = Readonly<{
 	error: Readonly<{
 		code: string
+		message: string
 		fields: Readonly<Record<string, string>>
 	}>
 }>
 
-function errorBody(code: string, fields: Readonly<Record<string, string>> = {}): ErrorBody {
-	return { error: { code, fields } }
+function errorBody(code: ErrorCode, fields: Readonly<Record<string, string>> = {}): ErrorBody {
+	return { error: { code, message: errorMessages[code], fields } }
 }
 
 export function domainErrorResponse(error: unknown, context: Context): Response | null {

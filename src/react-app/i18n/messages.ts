@@ -1,0 +1,63 @@
+import * as generatedMessages from "../paraglide/messages.js"
+
+export const messages = {
+	app: {
+		name: generatedMessages.appName,
+		documentTitle: generatedMessages.documentTitle,
+	},
+	auth: {
+		loading: generatedMessages.authLoading,
+		signInHeading: generatedMessages.signInHeading,
+		signInDescription: generatedMessages.signInDescription,
+	},
+	bootstrap: {
+		loading: generatedMessages.bootstrapLoading,
+		errorTitle: generatedMessages.bootstrapErrorTitle,
+		networkErrorDescription: generatedMessages.networkErrorDescription,
+		invalidResponseDescription: generatedMessages.invalidResponseDescription,
+	},
+	action: {
+		retry: generatedMessages.retry,
+		retrying: generatedMessages.retrying,
+		backToHome: generatedMessages.backToHome,
+		skipToContent: generatedMessages.skipToContent,
+	},
+	navigation: {
+		label: generatedMessages.navigationLabel,
+		home: generatedMessages.navigationHome,
+		expenses: generatedMessages.navigationExpenses,
+		budget: generatedMessages.navigationBudget,
+		settings: generatedMessages.navigationSettings,
+	},
+	home: {
+		title: generatedMessages.homeTitle,
+		spentLabel: generatedMessages.homeSpentLabel,
+		uncalculated: generatedMessages.homeUncalculated,
+		emptyTitle: generatedMessages.homeNoExpensesTitle,
+		emptyDescription: generatedMessages.homeNoExpensesDescription,
+	},
+	expenses: {
+		title: generatedMessages.expensesTitle,
+		emptyTitle: generatedMessages.expensesEmptyTitle,
+		emptyDescription: generatedMessages.expensesEmptyDescription,
+	},
+	budget: {
+		title: generatedMessages.budgetTitle,
+		emptyTitle: generatedMessages.budgetEmptyTitle,
+		emptyDescription: generatedMessages.budgetEmptyDescription,
+	},
+	settings: {
+		title: generatedMessages.settingsTitle,
+		accountLabel: generatedMessages.settingsAccountLabel,
+	},
+	route: {
+		notFoundTitle: generatedMessages.notFoundTitle,
+		notFoundDescription: generatedMessages.notFoundDescription,
+		errorTitle: generatedMessages.routeErrorTitle,
+		errorDescription: generatedMessages.routeErrorDescription,
+	},
+} as const
+
+export function formatDocumentTitle(page: string) {
+	return messages.app.documentTitle({ page })
+}

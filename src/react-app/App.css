@@ -1,70 +1,65 @@
-#root {
-	min-height: 100vh;
+:root {
+	--budget-ink: #2b312d;
+	--budget-muted: #68706b;
+	--budget-line: #e5e9e5;
+	--budget-primary: #496352;
+	--budget-primary-soft: #dbe8d8;
+	--budget-primary-hover: #cfdfcc;
 }
 
-.auth-screen,
-.app-shell {
-	width: min(100% - 2rem, 30rem);
-	margin: 0 auto;
+.app-text-ink {
+	color: var(--budget-ink);
 }
 
-.auth-screen {
-	min-height: 100vh;
-	display: grid;
-	align-content: center;
-	justify-items: center;
-	gap: 2rem;
-	padding-block: 2rem;
+.app-text-muted {
+	color: var(--budget-muted);
 }
 
-.auth-heading {
-	text-align: center;
+.app-divider {
+	border-color: var(--budget-line);
 }
 
-.auth-heading h1,
-.app-header h1 {
-	margin: 0;
+.app-button,
+.app-action-link {
+	color: var(--budget-primary);
+	background-color: var(--budget-primary-soft);
 }
 
-.auth-heading > p:last-child {
-	max-width: 28rem;
-	margin-bottom: 0;
-	color: #535b67;
+.app-button:hover,
+.app-action-link:hover {
+	color: var(--budget-primary);
+	background-color: var(--budget-primary-hover);
 }
 
-.eyebrow {
-	margin: 0 0 0.25rem;
-	font-size: 0.75rem;
-	font-weight: 700;
-	letter-spacing: 0.12em;
-	text-transform: uppercase;
-	color: #5065a8;
+.app-button:focus-visible,
+.app-action-link:focus-visible,
+.app-navigation-link:focus-visible {
+	outline-color: var(--budget-primary);
 }
 
-.app-shell {
-	padding-block: 1.5rem;
+.app-navigation-link:hover {
+	color: var(--budget-ink);
 }
 
-.app-header {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 1rem;
+.app-navigation-active {
+	color: var(--budget-primary);
 }
 
-.placeholder {
-	margin-top: 2rem;
-	padding: 1.25rem;
-	border: 1px solid #d9dce3;
-	border-radius: 0.75rem;
-	background: #fff;
+.skip-link {
+	position: fixed;
+	top: 0;
+	left: 1rem;
+	z-index: 20;
+	padding: 0.75rem 1rem;
+	color: var(--budget-primary);
+	background: white;
+	transform: translateY(-100%);
 }
 
-.placeholder h2 {
-	margin-top: 0;
+.skip-link:focus {
+	transform: translateY(0);
 }
 
-.placeholder p {
-	margin-bottom: 0;
-	color: #535b67;
+#main-content:focus {
+	outline: none;
 }

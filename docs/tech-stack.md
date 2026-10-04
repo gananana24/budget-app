@@ -37,9 +37,41 @@ flowchart TB
 - `usecase`は一つのpublic `execute`を持つUseCase interfaceと具象classで処理を調整し、`domain`のEntity、Value Object、Repositoryを利用する。
 - `domain`は最も内側に置き、Hono、Clerk、PostgreSQL、Cloudflare Workersへ依存しない。
 
+## フロントエンドの依存関係
+
+[Bulletproof React](https://github.com/alan2207/bulletproof-react)のfeature-based構成と単方向の依存を参考にする。ただし、サンプルのライブラリや抽象化をそのまま導入せず、このアプリで必要になった境界だけを採用する。
+
+```mermaid
+flowchart TB
+	App["app<br/>provider / router / composition"]
+	Features["features<br/>feature UI / api / query options"]
+	Components["components<br/>app shared UI"]
+	Ui["components/ui<br/>shadcn generated source"]
+	Lib["lib<br/>configured API client"]
+
+	App --> Features
+	App --> Components
+	App --> Lib
+	Features --> Components
+	Features --> Lib
+	Components --> Ui
+```
+
+- `app`は認証、QueryClient、Router、featureを組み立てる。featureや共通部品から`app`へ依存しない。
+- 機能固有のfetcher、リクエスト・レスポンス型、TanStack Queryの`queryOptions`は`features/<feature>/api`へ同居させる。URLやHTTP methodを画面コンポーネントへ書かない。
+- `lib/api-client.ts`は認証トークン付与、HTTP送信、レスポンス解析、通信不能時の安全な正規化だけを担当する。feature固有のエンドポイント、Query key、画面通知を持たせない。
+- 認証済みセッションごとに設定済みAPIクライアントを一つ生成し、各featureのfetcherへ注入する。
+- feature間を直接importしない。複数featureで必要になったものだけを`components`または`lib`へ移す。
+- `components/ui`とshadcnが追加した補助ファイルは生成元として直接編集しない。アプリ固有の見た目と操作要件は`components`または`features`のラッパーで追加する。
+- 各featureに`api`、`components`、`hooks`などを一律に作らない。必要になったディレクトリだけを追加する。
+
 ## 決定済み
 
 - 画面はReact＋Viteを使用し、TypeScriptで実装する。
+- 画面遷移はTanStack Routerのfile-based routing、サーバー状態はTanStack Queryで管理する。画面コンポーネントへURL、HTTP method、Query keyを分散させない。
+- フロントエンドの日本語文言はParaglide JSを通し、原文を`src/react-app/i18n/locales/ja.json`、アプリ向けの窓口を`src/react-app/i18n/messages.ts`へ置く。
+- スタイリングはTailwind CSS v4を基本とし、shadcn/uiは必要なコンポーネントのソースコードを追加する手段として使う。shadcnが生成したファイルは直接変更せず、アプリ固有の見た目と操作要件はラッパーまたはfeature側で追加する。
+- API通信はsame-originのnative fetchを薄く設定した`lib/api-client.ts`を使う。Axiosなどの別HTTPクライアントは追加せず、必要なHTTP methodだけを公開する。
 - APIはCloudflare Workersで実装し、画面と同じオリジンの`/api`として公開する。
 - Cloudflare WorkersのバックエンドもTypeScriptで実装する。フロントエンドと開発言語・型・検証処理を共有し、Clerkと`pg`を利用する。
 - WorkerのHTTPフレームワークにはHonoを使い、`/api`のルーティング、認証ミドルウェア、入力検証、HTTPレスポンス変換、共通エラー処理を担当させる。
@@ -258,7 +290,7 @@ MVPでは入力者の利用者IDを保存しない。
 - APIは同一オリジンの`/api`以下に置き、すべてClerkの認証を必須とする。
 - MVPではクライアントから`household_id`を受け取らない。Clerk利用者IDからアプリ利用者と所属家計をサーバー側で特定し、すべてのSQLへ家計ID条件を含める。
 - 日付は`YYYY-MM-DD`、対象月は月初日の`YYYY-MM-01`、金額はJavaScriptの安全な整数範囲を確認したJSON numberで返す。
-- エラーは`{ "error": { "code": "...", "fields": { ... } } }`を基本形とする。画面に表示する日本語はフロントエンドの多言語文言ファイルで管理し、APIのエラーコードから変換する。
+- エラーは`{ "error": { "code": "...", "message": "...", "fields": { ... } } }`を基本形とする。安定したエラーコードと安全な日本語メッセージはバックエンドで一元管理し、フロントエンドは受け取った`message`を加工せず表示する。通信断などレスポンスを受け取れない場合だけ、フロントエンドの共通フォールバック文言を使用する。
 - 存在しないデータと、別家計に属していて操作できないデータは、どちらも`404`として返して所属情報を推測できないようにする。
 - 作成成功は`201`、取得・更新成功は`200`、削除成功は本文なしの`204`を基本とする。
 
