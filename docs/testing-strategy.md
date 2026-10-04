@@ -1,8 +1,17 @@
 # テスト戦略
 
-更新日: 2026-09-26
+更新日: 2026-10-04
 
-この文書は、[プログラミング思想](./programming-philosophy.md) に基づく自動テストの判断基準と記述規則を定める。Vladimir Khorikov著『単体テストの考え方／使い方』を主な基準とし、このリポジトリで実行可能な規則へ具体化する。
+この文書は、[プログラミング思想](./programming-philosophy.md) と [バックエンド設計](./backend-architecture.md) に基づく自動テストの判断基準と記述規則を定める。Vladimir Khorikov著『単体テストの考え方／使い方』を主な基準とし、このリポジトリで実行可能な規則へ具体化する。
+
+## テストの配置
+
+- バックエンドのテストは対象実装と同じディレクトリへ`*.test.ts`として置き、変更対象とテストを近くに保つ。
+- Vitestの探索対象は`src/**/*.test.{ts,tsx}`とし、Pythonのpytestで一般的な独立`tests/`ディレクトリは模倣しない。
+- Domain testはEntityとValue Objectの振る舞いを検証する。
+- UseCase testはRepository stubを使い、UseCaseの観察可能な結果とDomain Exceptionを検証する。
+- Infrastructure testは実PostgreSQLを使い、Repository実装、DB行の変換、制約、transactionを検証する。
+- Presentation testはHTTP request、response schema、status、認証境界、例外変換を検証する。
 
 ## テストの目的
 
@@ -35,7 +44,7 @@
 2. 状態ベースのテスト
 3. コミュニケーションベースのテスト
 
-純粋関数の戻り値を確認するテストが最も望ましい。状態変化を持つ処理では、外部から観察できる最終状態を確認する。メソッド呼び出しの検証は、メール送信などアプリ外部へ出る副作用に限定する。
+Value Objectや純粋関数の戻り値を確認するテストを優先する。Entityの状態変化を持つ処理では、public APIから観察できる最終状態を確認する。メソッド呼び出しの検証は、メール送信などアプリ外部へ出る副作用に限定する。
 
 ## AAAパターン
 
@@ -85,7 +94,7 @@ it("rejects an expense dated after today in Tokyo", () => {
 自分たちが管理するアプリケーションとDBの接続は、実際のPostgreSQLを使って検証する。
 
 - 生SQL、外部キー、一意制約、`CHECK`制約、トランザクション、冪等性を実DBで確認する。
-- 主要な正常フローを、applicationからDBまで通して確認する。
+- 主要な正常フローを、UseCaseからRepository実装とDBまで通して確認する。
 - DB制約、認可、競合など、単体テストだけでは保証できない重要な失敗ケースを追加する。
 - 同じ条件を単体テストと結合テストで無差別に重複させない。
 - テストごとのデータを隔離し、実行順や前のテストが残した状態へ依存させない。
@@ -104,11 +113,11 @@ it("rejects an expense dated after today in Tokyo", () => {
 ### 実物を使う依存
 
 - PostgreSQLはアプリケーションが管理する依存として扱い、結合テストでは実物を使う。
-- RepositoryやStoreをすべてモックへ置き換えたテストだけで、DB連携の正しさを保証したことにしない。
+- Repositoryをすべてstubへ置き換えたUseCase testだけで、DB連携の正しさを保証したことにしない。
 
 ### 置き換える依存
 
-- Clerk、メール送信など、自分たちのテスト環境で状態を完全に制御できない外部サービスはAdapter境界で置き換える。
+- Clerk、メール送信など、自分たちのテスト環境で状態を完全に制御できない外部サービスはInfrastructure境界で置き換える。
 - 外部サービスとの実接続は、必要な環境で主要フローのスモークテストとして確認する。
 
 ### MockとStub
@@ -116,7 +125,7 @@ it("rejects an expense dated after today in Tokyo", () => {
 - Mockは、アプリ外部へ出る副作用を検証するために使う。
 - Stubは、テスト対象へ入力を与えるために使う。
 - Stubが何回呼ばれたかを検証しない。
-- 内部クラス、Store、Repositoryの呼び出し順をテストの主張にしない。
+- UseCase実装、DB行の変換、Repositoryの内部呼び出し順をテストの主張にしない。
 
 ## テストデータ
 

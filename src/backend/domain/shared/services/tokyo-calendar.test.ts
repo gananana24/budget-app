@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { getDateInTokyo, getMonthStartInTokyo } from "./calendar"
+import { getDateInTokyo, getMonthStartInTokyo } from "./tokyo-calendar"
 
 describe("Tokyo calendar", () => {
 	it("uses the date and month in Asia/Tokyo", () => {

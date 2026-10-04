@@ -13,10 +13,16 @@
 	"secrets": {
 		"required": [
 			"CLERK_PUBLISHABLE_KEY",
-			"CLERK_SECRET_KEY",
-			"DATABASE_URL"
+			"CLERK_SECRET_KEY"
 		]
 	},
+	"hyperdrive": [
+		{
+			"binding": "DATABASE",
+			"id": "280af43750734d56bd0caa1f8c2f8329",
+			"localConnectionString": "postgresql://postgres:postgres@127.0.0.1:54322/budget_app_dev?sslmode=disable"
+		}
+	],
 	"observability": {
 		"enabled": true,
 		"traces": {

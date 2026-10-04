@@ -1,5 +1,7 @@
 import type { Context } from "hono"
-import type { ApplicationError } from "../../application/errors/application-error"
+import { UnauthorizedError } from "../../domain/authentication/exceptions/unauthorized-error"
+import { BootstrapRequiredError } from "../../domain/authorization/exceptions/bootstrap-required-error"
+import { InvalidValueError } from "../../domain/shared/exceptions/invalid-value-error"
 
 type ErrorBody = Readonly<{
 	error: Readonly<{
@@ -12,17 +14,20 @@ function errorBody(code: string, fields: Readonly<Record<string, string>> = {}):
 	return { error: { code, fields } }
 }
 
-export function applicationErrorResponse(error: ApplicationError, context: Context): Response {
-	switch (error.code) {
-		case "VALIDATION_ERROR":
-			return context.json(errorBody(error.code, error.fields), 400)
-		case "NOT_FOUND":
-			return context.json(errorBody(error.code, error.fields), 404)
-		case "UNAUTHORIZED":
-			return context.json(errorBody(error.code, error.fields), 401)
-		case "CONFLICT":
-			return context.json(errorBody(error.code, error.fields), 409)
+export function domainErrorResponse(error: unknown, context: Context): Response | null {
+	if (error instanceof UnauthorizedError) {
+		return context.json(errorBody("UNAUTHORIZED"), 401)
 	}
+
+	if (error instanceof BootstrapRequiredError) {
+		return context.json(errorBody("BOOTSTRAP_REQUIRED"), 409)
+	}
+
+	if (error instanceof InvalidValueError) {
+		return context.json(errorBody("VALIDATION_ERROR", { reason: error.reason }), 400)
+	}
+
+	return null
 }
 
 export function notFoundResponse(context: Context): Response {

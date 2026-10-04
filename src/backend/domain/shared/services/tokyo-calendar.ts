@@ -1,6 +1,8 @@
 const TOKYO_TIME_ZONE = "Asia/Tokyo"
 
-function getTokyoDateParts(instant: Date): Readonly<{ year: string; month: string; day: string }> {
+type TokyoDateParts = Readonly<{ year: string; month: string; day: string }>
+
+function getTokyoDateParts(instant: Date): TokyoDateParts {
 	const parts = new Intl.DateTimeFormat("en-US", {
 		timeZone: TOKYO_TIME_ZONE,
 		year: "numeric",

@@ -1,8 +1,8 @@
 # プログラミング思想
 
-更新日: 2026-09-26
+更新日: 2026-10-04
 
-この文書は、このリポジトリで設計・実装・レビューを行うときの判断基準を定める。機能要件は [MVP要件](./mvp-spec.md)、具体的な技術判断は [技術構成](./tech-stack.md)、テストの詳細は [テスト戦略](./testing-strategy.md) を正とする。
+この文書は、このリポジトリで設計・実装・レビューを行うときの判断基準を定める。機能要件は [MVP要件](./mvp-spec.md)、バックエンドの構造は [バックエンド設計](./backend-architecture.md)、具体的な技術判断は [技術構成](./tech-stack.md)、テストの詳細は [テスト戦略](./testing-strategy.md) を正とする。
 
 ## 優先順位
 
@@ -19,7 +19,7 @@
 ## YAGNIと抽象化
 
 - YAGNIを守り、現在の要件にない機能、拡張ポイント、設定項目、抽象化を先回りして作らない。
-- 将来の可能性だけを理由に、DIコンテナ、汎用Repository、プラグイン機構、共通基底クラスを追加しない。
+- 将来の可能性だけを理由に、業務要件のないRepository method、プラグイン機構、共通基底クラスを追加しない。
 - データ消失、認可漏れ、移行困難など、後から直す費用が極端に高い境界は現在の要件として先に設計する。
 - 見た目が似ているだけのコードは共通化しない。同じ業務概念を表し、同じ理由で変更されると確認できたときに共通化する。
 - 小さな重複は、誤った抽象化よりも許容する。
@@ -32,84 +32,69 @@
 
 ### 採用する構造
 
-基本は次の4層と、ランタイム固有のComposition Rootで構成する。
+基本はdddpyを基準とする次の4層と、Cloudflare Workersのエントリーポイントで構成する。詳細は [バックエンド設計](./backend-architecture.md) を正とする。
 
 ```text
-presentation ──> application ──> domain
-infrastructure ─> application ──> domain
-
-Composition Root
-├── presentationを生成
-├── infrastructureの実装を生成
-└── applicationへ依存を注入
+presentation ───────────────> usecase ──> domain
+presentation ─> infrastructure/di ─────> usecase
+infrastructure/postgres ───────────────> domain
+infrastructure/di ─> infrastructure/postgres
+worker ─────────────> presentation / infrastructure/di
 ```
 
-- `domain`: 業務ルール、値、状態遷移、純粋な計算を置く。フレームワークや外部サービスへ依存しない。
-- `application`: ユースケースと、外部機能へ要求するPortを置く。処理の流れを調整するが、HTTPやSQLの詳細を持たない。
-- `infrastructure`: DB、認証、外部サービスなどのAdapterを置き、applicationのPortを実装する。
-- `presentation`: HTTPやUIなどの入力をapplicationの入力へ変換し、結果を外部向けの表現へ変換する。
-- Composition Root: 具体的なAdapterとユースケースを生成し、依存を明示的に組み立てる。このリポジトリではCloudflare Workers固有の `src/backend/worker/` が担う。
+- `domain`: Entity、Value Object、Repository、Domain Exceptionを置く。フレームワークや外部サービスへ依存しない。
+- `usecase`: 一つのpublic `execute`を持つユースケースを置き、Domain modelとRepositoryを使って処理を調整する。
+- `infrastructure`: PostgreSQLなどのRepository実装、DB行の型とmapper、依存関係とライフサイクルの組み立てを置く。
+- `presentation`: HTTP入力をDomainが受け取る値へ変換し、UseCaseの結果と例外をHTTP向けのschemaへ変換する。
+- `worker`: Cloudflare Workersのエントリーポイントとし、ランタイムをHonoとInfrastructureへ接続する。
 
-### 採用する条件
+- `domain`と`usecase`からHono、Clerk、PostgreSQL、Cloudflare Workersを参照しない。
+- RepositoryはテーブルではなくEntityまたは集約の境界に対応させる。
+- UseCase、Repository、Entity、Value Objectの責務を別層へ混在させない。
+- 未実装機能の空ディレクトリや未使用methodは先に作らない。
 
-- 業務判断と外部I/Oが同じ機能に存在する。
-- DBや外部サービスを使わずに検証したい業務ルールがある。
-- 層を分けることで依存方向と変更理由が明確になる。
+## Domain logic and side effects
 
-### 採用しない形
-
-- 単純な委譲のためだけにクラスやインターフェースを増やさない。
-- 各テーブルへ機械的にRepositoryを一つずつ作らない。
-- パターン名に合わせるためだけの空の層、基底クラス、ラッパーを作らない。
-- `domain` や `application` からHono、Clerk、Neon、Cloudflare Workersを参照しない。
-
-### 許容する例外
-
-業務ルールを持たない小さな処理では、全層にファイルを作る必要はない。ただし、外部入力の検証、認可、秘密情報の保護は省略しない。
-
-## Functional Core, Imperative Shell
-
-- 計算と判断は、可能な限り入力から出力を返す純粋関数にする。
-- DB、HTTP、現在時刻、乱数、ログなどの副作用は外側へ寄せる。
-- ドメインロジックの内部で現在時刻を取得せず、判定基準となる日付や時刻を引数で受け取る。
+- 業務判断はEntityとValue Objectへ置き、UseCaseがRepositoryを介して副作用を調整する。
+- DB、HTTP、現在時刻、乱数、ログなどの外部要因をDomain modelへ直接持ち込まない。
+- Domain modelの内部で現在時刻を取得せず、判定基準となる日付や時刻をValue Objectまたは引数で受け取る。
 - 副作用を隠すグローバル状態やSingletonを作らない。
-- 純粋関数にするために処理全体の理解が難しくなる場合は、読みやすいまとまりを優先する。
+- 値の変換や集計に識別子と状態遷移が不要な場合は、Domain内の純粋関数を使用してよい。
 
 ## ドメインモデル
 
-- 基本は純粋関数と明示的な型で業務ルールを表現する。
-- データを包むだけのEntityクラスは作らない。
-- 生成時から常に不変条件を保証する必要があり、その値が複数のユースケースで振る舞いを持つ場合にValue Objectを検討する。
-- Value Object、Entity、集約などの用語を使うこと自体を目的にしない。
+- 識別子を持ち、状態と振る舞いを持つ業務概念はEntityとして実装する。
+- 識別子、金額、日付、対象月、名前など、値自体に不変条件または振る舞いがある概念はValue Objectとして実装する。
+- Entityは識別子で同一性を判断し、業務上の操作と`equals()`などの明示的な比較methodを公開する。
+- Value Objectは生成時から不変条件を保証し、生成後は変更できないようにする。不変条件や振る舞いがない内部データは`type`で表す。
+- DB行やHTTP payloadをDomain modelとして直接利用せず、境界でEntityとValue Objectへ変換する。
 
-## PortとAdapter
+## Repository
 
 ### 解決したい問題
 
-ユースケースがDBのテーブル構成や外部サービスのSDKへ直接依存することを防ぐ。
+UseCaseがDBのテーブル構成や外部サービスのSDKへ直接依存することを防ぐ。
 
 ### 採用する形
 
-- Portは、テーブル単位ではなく仕事単位で定義する。
-- 初期化、月次取得、予算保存など、整合性を保つ処理単位を一つの操作として表す。
-- 読み取りは、利用者の画面や集計に必要な形を直接返してよい。
-- 複数テーブルの更新は、Adapter内部の一つのトランザクションにまとめる。
-
-例えば初回利用時の処理は、複数の汎用Repositoryをapplicationから順番に呼ぶのではなく、`BootstrapStore.initializeUser()` のように一つの仕事として表す。
+- Repositoryの抽象は`domain/<feature>/repositories/`へ置く。
+- RepositoryはEntityまたは集約単位で定義し、必要な`save`、`findById`、`findAll`、`delete`などを公開する。
+- Repository実装は`infrastructure/<technology>/<feature>/`へ置き、DB行の型とmapperでDomain modelへ変換する。
+- 複数Repositoryを使うUseCaseの接続とトランザクションは`infrastructure/di`で同じライフサイクルへ束縛する。
+- 読み取りでもDB行をそのまま返さず、Domain modelまたは明示的なUseCase出力へ変換する。
 
 ### 採用しない形
 
-- `findAll`、`save`、`delete`を揃えただけの汎用Repositoryを作らない。
-- 将来使うかもしれないメソッドをPortへ追加しない。
-- SQL行やSDKのレスポンス型を、そのままdomainへ渡さない。
+- 将来使うかもしれないメソッドをRepositoryへ追加しない。
+- すべてのEntityへ共通する汎用Repository基底クラスを作らない。
+- SQL行、`pg`の型、SDKのレスポンス型をDomainとUseCaseへ渡さない。
 
 ## エラー処理
 
-- 入力不正、残高不足、権限不足、対象なしなど、呼び出し側が判断・回復する業務上の失敗は、判別可能なUnionなどの戻り値で明示する。
+- 入力不正、不正な状態遷移、権限不足、対象なしなど、呼び出し側が判断・回復する業務上の失敗は、機能ごとのDomain Exceptionで明示する。
 - 業務上の失敗を、理由の分からない `false` や `null` に押し込めない。
 - プログラミングエラーや、成立してはならない状態は例外として扱う。
-- すべての関数を機械的に `Result` 型で包まない。利用側が失敗を処理する必要がある場合に使う。
-- ユースケース全体を中断し、外側で共通変換する失敗は、コードを持つapplicationエラーとして扱ってよい。
+- PresentationはDomain ExceptionをHTTP statusと安定したエラーコードへ変換する。
 - DB障害や設定不備などの想定外エラーは握りつぶさず、presentationの境界で一般化したレスポンスへ変換する。
 - `catch` は、その場で回復する、別の意味へ翻訳する、または処理境界で記録する場合に限定する。
 - 空の `catch` や、ログを出して同じエラーを投げ直すだけの処理は作らない。情報を付加して投げ直す場合は `cause` で元のエラーを保持する。
@@ -128,7 +113,7 @@ Composition Root
 ### 型と外部入力
 
 - HTTP入力、環境変数、DB結果、外部サービス応答は信頼せず、実行時に検証する。
-- 層をまたぐPortとユースケースの入出力は明示的に型付けする。
+- 層をまたぐRepositoryとUseCaseの入出力は明示的に型付けする。
 - 関数内部の自明な型は推論へ任せる。
 - コンパイル時の型と、実行時に外部入力が正しいことを区別する。
 - 型が分からない外部入力には `unknown` を使い、検証または型の絞り込みを終えるまで利用しない。
@@ -191,8 +176,10 @@ Composition Root
 
 ### クラス
 
-- 状態、ライフサイクル、生成時から守る不変条件、またはフレームワークとの統合がある場合にクラスを使う。
-- それ以外の計算や変換には関数とモジュールを使う。
+- EntityとValue Objectは、不変条件、状態、振る舞いを閉じ込める必要がある場合にclassで表す。
+- RepositoryとUseCaseの契約は`interface`で表し、具象実装をclassで表す。共有状態や共通実装が必要な場合だけ`abstract class`を使う。
+- DB行はInfrastructure固有の`type`で表し、mapper関数でDomain modelへ変換する。
+- 状態を持たない局所的な計算と変換には関数を使ってよい。
 - クラスを使う場合も継承より合成を優先し、関数をまとめるだけの静的クラスは作らない。
 
 ### importとexport

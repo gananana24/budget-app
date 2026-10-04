@@ -1,30 +1,31 @@
 import { Hono, type MiddlewareHandler } from "hono"
-import { ApplicationError } from "../../application/errors/application-error"
+import type { BootstrapUseCase } from "../../usecase/bootstrap/bootstrap-use-case"
 import type { HttpEnvironment } from "./authentication"
-import {
-	applicationErrorResponse,
-	notFoundResponse,
-	unexpectedErrorResponse,
-} from "./error-response"
+import { BootstrapApiRouteHandler } from "./bootstrap/handlers/bootstrap-api-route-handler"
+import { domainErrorResponse, notFoundResponse, unexpectedErrorResponse } from "./error-response"
 
 type HttpAppDependencies = Readonly<{
 	authenticationMiddleware: readonly [
 		MiddlewareHandler<HttpEnvironment>,
 		...MiddlewareHandler<HttpEnvironment>[],
 	]
+	bootstrapUseCase: BootstrapUseCase
 }>
 
 export function createHttpApp({
 	authenticationMiddleware,
+	bootstrapUseCase,
 }: HttpAppDependencies): Hono<HttpEnvironment> {
 	const app = new Hono<HttpEnvironment>()
 
 	app.use("/api/*", ...authenticationMiddleware)
+	new BootstrapApiRouteHandler(bootstrapUseCase).registerRoutes(app)
 
 	app.notFound(notFoundResponse)
 	app.onError((error, context) => {
-		if (error instanceof ApplicationError) {
-			return applicationErrorResponse(error, context)
+		const domainResponse = domainErrorResponse(error, context)
+		if (domainResponse) {
+			return domainResponse
 		}
 
 		return unexpectedErrorResponse(error, context)
