@@ -1,15 +1,15 @@
 # 家計簿アプリ MVP開発計画
 
-更新日: 2026-09-27
+更新日: 2026-10-04
 
-機能要件は [MVP要件](./mvp-spec.md)、採用技術と設計判断は [技術構成](./tech-stack.md)、実装判断の原則は [プログラミング思想](./programming-philosophy.md)、テストの判断基準と記述規則は [テスト戦略](./testing-strategy.md) を正とする。この文書は、MVPを実装して公開するまでの順序と、GitHub Issueで管理する実装単位を定める。
+機能要件は [MVP要件](./mvp-spec.md)、バックエンドの構造は [バックエンド設計](./backend-architecture.md)、採用技術と設計判断は [技術構成](./tech-stack.md)、実装判断の原則は [プログラミング思想](./programming-philosophy.md)、テストの判断基準と記述規則は [テスト戦略](./testing-strategy.md) を正とする。この文書は、MVPを実装して公開するまでの順序と、GitHub Issueで管理する実装単位を定める。
 
 ## 開発方針
 
 - スマートフォンで実際に使える流れを早く通し、最初の実用到達点を「Googleでログインし、支出を登録して当月一覧で確認できる」とする。
 - API、DB、画面を機能単位でつなぐ。共通基盤だけを長期間作り続けない。
 - アプリケーションの品質確認はpnpm、Issue・ブランチ・Pull Request・CI/CDなどリポジトリ運用はTaskfileへ入口を分ける。
-- `domain`と`application`を外部サービスから分離するが、MVPで使わない抽象化、DIコンテナ、汎用Repositoryは作らない。
+- dddpyを基準に、`domain`、`usecase`、`infrastructure`、`presentation`を分離し、Entity、Value Object、Repository、UseCase、DB row mapper、DIの責務を守る。
 - DB変更はSQLマイグレーションを先に追加し、生SQLと制約を同じIssueで検証する。
 - 認可はすべてサーバー側で判定し、クライアントから家計IDを受け取らない。
 - 自動テストは、金額計算、日付、認可、DB制約、予算継承など、誤るとデータや利用者分離を壊す箇所に絞る。
@@ -95,14 +95,14 @@
 
 **実装内容:**
 
-- `domain`、`application`、`infrastructure`、`presentation/http`、`worker`の基本構造を作る。
+- `domain`、`usecase`、`infrastructure/postgres`、`infrastructure/di`、`presentation/http`、`worker`の基本構造を作る。
 - PostgreSQL接続、環境変数の型、依存関係の組み立てを実装する。
 - APIの入力検証、共通エラー形式、404変換、予期しないエラーの処理を用意する。
 - 日付、月、金額、メモ、費目名に使う検証処理を配置する。
 
 **受け入れ条件:**
 
-- `domain`と`application`がHono、Clerk、Neon、Workersへ依存していない。
+- `domain`と`usecase`がHono、Clerk、PostgreSQL、Workersへ依存していない。
 - APIエラーが仕様書の共通形式で返る。
 - 秘密値をログやレスポンスへ出さない。
 

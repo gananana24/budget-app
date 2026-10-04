@@ -1,8 +1,8 @@
 # 家計簿アプリ 技術構成
 
-更新日: 2026-09-27
+更新日: 2026-10-04
 
-機能と運用上の要件は [MVP要件](./mvp-spec.md) にまとめる。
+機能と運用上の要件は [MVP要件](./mvp-spec.md)、バックエンドの構造と各層の責務は [バックエンド設計](./backend-architecture.md) にまとめる。
 
 ## バックエンドの依存関係
 
@@ -12,32 +12,30 @@
 flowchart TB
 	 subgraph Backend["src/backend"]
 		direction TB
-		subgraph Outer["外側: Frameworks / Adapters"]
-			Worker["worker<br/>起動・依存関係の組み立て<br/>Cloudflare Workers"]
-			Presentation["presentation/http<br/>ルーティング・HTTP変換<br/>Hono"]
-			Infrastructure["infrastructure<br/>DB・認証アダプター<br/>PostgreSQL / Clerk"]
-			subgraph Application["application"]
-				UseCases["ユースケース<br/>外部機能のPort"]
-				subgraph Domain["domain"]
-					Rules["業務ルール・値"]
-				end
-			end
-		end
+		Worker["worker<br/>Cloudflare Workers entrypoint"]
+		Presentation["presentation/http<br/>handlers / schemas / error messages"]
+		DI["infrastructure/di<br/>依存関係と接続ライフサイクル"]
+		Infrastructure["infrastructure/postgres<br/>Repository実装 / row mapper"]
+		UseCases["usecase<br/>application-specific rules"]
+		Domain["domain<br/>Entity / Value Object / Repository / Exception"]
 
 		Worker --> Presentation
-		Worker --> Infrastructure
-		Worker --> UseCases
+		Worker --> DI
+		Presentation --> DI
 		Presentation --> UseCases
-		Infrastructure -. "Portを実装" .-> UseCases
-		UseCases --> Rules
+		DI --> Infrastructure
+		DI --> UseCases
+		Infrastructure --> Domain
+		UseCases --> Domain
 	end
 ```
 
-- `worker`はComposition Rootとして、必要な実装を生成して`presentation`へ渡す。
-- `presentation`はHTTPをアプリケーションの入力・出力へ変換し、業務ルールを直接実装しない。
-- `infrastructure`は`application`が定義したPortを実装し、PostgreSQLやClerkの詳細を内側へ漏らさない。
-- `application`はユースケースを調整し、`domain`の業務ルールを利用する。
-- `domain`は最も内側に置き、Hono、Clerk、Neon、Cloudflare Workersへ依存しない。
+- `worker`はCloudflare WorkersのランタイムをHonoとInfrastructureへ接続する。
+- `presentation`はHTTPとDomain／UseCaseの表現を相互変換し、業務ルールを直接実装しない。
+- `infrastructure/di`はRepository実装、UseCase、接続とトランザクションのライフサイクルを組み立てる。
+- `infrastructure/postgres`はDomain Repositoryを実装し、PostgreSQLの詳細を内側へ漏らさない。
+- `usecase`は一つのpublic `execute`を持つUseCase interfaceと具象classで処理を調整し、`domain`のEntity、Value Object、Repositoryを利用する。
+- `domain`は最も内側に置き、Hono、Clerk、PostgreSQL、Cloudflare Workersへ依存しない。
 
 ## 決定済み
 
@@ -45,9 +43,9 @@ flowchart TB
 - APIはCloudflare Workersで実装し、画面と同じオリジンの`/api`として公開する。
 - Cloudflare WorkersのバックエンドもTypeScriptで実装する。フロントエンドと開発言語・型・検証処理を共有し、Clerkと`pg`を利用する。
 - WorkerのHTTPフレームワークにはHonoを使い、`/api`のルーティング、認証ミドルウェア、入力検証、HTTPレスポンス変換、共通エラー処理を担当させる。
-- バックエンドは軽量なオニオンアーキテクチャとし、依存方向を`presentation/infrastructure -> application -> domain`に限定する。`domain`と`application`はHono、Clerk、Neon、Cloudflare WorkersのAPIへ直接依存しない。
-- `src/backend`配下の`domain`には支出・予算などの業務ルール、`application`にはユースケースと外部機能のインターフェース、`infrastructure`にはPostgreSQLの生SQLとClerk連携、`presentation/http`にはHono、`worker/index.ts`には依存関係の組み立てを置く。
-- MVPではDIコンテナを導入せず、`src/backend/worker/index.ts`で依存を明示的に組み立てる。テーブルごとの機械的なRepositoryは作らず、ユースケースが必要とするDB操作単位でインターフェースを定義する。
+- バックエンドはdddpyを基準とするオニオンアーキテクチャとし、Entity、Value Object、Domain Repository、Domain Exception、UseCase、Repository実装、DB row mapper、DI、Presentationを分離する。
+- `src/backend/domain`には機能ごとのDomain modelとRepository interface、`src/backend/usecase`には一ユースケース一UseCase、`src/backend/infrastructure/postgres`には生SQLを使うRepository実装とDB行のmapper、`src/backend/infrastructure/di`には依存関係と接続ライフサイクル、`src/backend/presentation/http`にはHono handlerとschema、`src/backend/worker/index.ts`にはWorkers entrypointを置く。
+- Repositoryはテーブル単位ではなくEntityまたは集約単位で定義する。UseCase実装はconstructor injectionでRepositoryを受け取り、Infrastructureのfactoryが具象実装を接続する。
 - MVPはログイン後の利用を中心とし、検索エンジン向けの公開ページは作らない前提とする。
 - Googleログインとセッション管理にはClerkを使う。MVP後も認証方法はGoogleだけとし、メール、パスワード、電話番号などの認証方式は追加しない。
 - 家計簿データの保存先にはNeonのPostgreSQLを使う。
@@ -149,7 +147,7 @@ flowchart TB
 - 引き継ぎで新しく作成する`monthly_budgets`行は、`created_at`と`updated_at`の両方にコピー実行時のDB時刻を設定する。コピー元の時刻は引き継がず、その月の行が作られた時刻を記録する。その後の手動変更時だけ`updated_at`を更新する。
 - 対象月の`budget_periods.initialized_at`には、予算状態をDBへ作成したトランザクション時刻を設定する。対象月そのものの日付は入れない。
 - MVPの予算APIは`Asia/Tokyo`の今月以前だけを受け付け、未来月の閲覧・編集・初期化を拒否する。新しい月は、その月になった後の最初の利用時に、それより前で最も新しい初期化済み月から直接引き継ぐ。
-- 予算引き継ぎSQLはPostgreSQLのストアドプロシージャにせず、`infrastructure/db`内のアプリケーションコードとしてリポジトリで管理する。`application`は予算初期化のインターフェースを呼び、`domain`はSQLやPostgreSQLへ依存しない。
+- 予算引き継ぎSQLはPostgreSQLのストアドプロシージャにせず、`infrastructure/postgres/budget`のRepository実装として管理する。`usecase`はDomain Repositoryを呼び、`domain`はSQLやPostgreSQLへ依存しない。
 - 支出の未来日付禁止はAPIでも確認する。
 - `budget_periods`と`monthly_budgets`の対象月が月初日であることをDBの制約でも保証する。
 - 支出一覧と月次集計のため、`expenses(household_id, expense_date DESC, created_at DESC, id DESC)`のインデックスを設ける。

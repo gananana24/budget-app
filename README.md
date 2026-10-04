@@ -155,5 +155,8 @@ task clean:issue -- 1
 ## ドキュメント
 
 - [MVP要件](docs/mvp-spec.md)
+- [バックエンド設計](docs/backend-architecture.md)
 - [技術構成](docs/tech-stack.md)
+- [プログラミング思想](docs/programming-philosophy.md)
+- [テスト戦略](docs/testing-strategy.md)
 - [MVP開発計画](docs/development-plan.md)

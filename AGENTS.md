@@ -2,7 +2,7 @@
 
 ## Project engineering rules
 
-- Before implementation or review, read `docs/programming-philosophy.md` and treat it as the project's design and coding decision criteria.
+- Before implementation or review, read `docs/programming-philosophy.md` and `docs/backend-architecture.md`, and treat them as the project's design and coding decision criteria.
 - Before adding or changing tests, read `docs/testing-strategy.md` and follow its testing patterns, including the mandatory commented AAA structure.
 - If these rules conflict with a concrete product requirement, stop and confirm the intended trade-off instead of silently choosing one.
 
