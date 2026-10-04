@@ -29,24 +29,69 @@ COMMENT ON EXTENSION pgcrypto IS 'cryptographic functions';
 
 
 --
--- Name: seed_default_categories_for_household(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: ensure_category_available_to_household(); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.seed_default_categories_for_household() RETURNS trigger
+CREATE FUNCTION public.ensure_category_available_to_household() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
-  INSERT INTO public.categories (household_id, name, seed_key)
-  VALUES
-    (NEW.id, '食費', 'food'),
-    (NEW.id, '日用品', 'daily_goods'),
-    (NEW.id, '住居費', 'housing'),
-    (NEW.id, '水道光熱費', 'utilities'),
-    (NEW.id, '通信費', 'communications'),
-    (NEW.id, '交通費', 'transportation'),
-    (NEW.id, '医療費', 'medical'),
-    (NEW.id, '娯楽費', 'entertainment'),
-    (NEW.id, 'その他', 'other');
+  IF NEW.category_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1
+    FROM public.categories
+    WHERE categories.id = NEW.category_id
+      AND (
+        categories.household_id IS NULL
+        OR categories.household_id = NEW.household_id
+      )
+  ) THEN
+    RAISE EXCEPTION 'category is not available to household'
+      USING ERRCODE = '23503';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+
+--
+-- Name: protect_category_invariants(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.protect_category_invariants() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  IF TG_OP = 'DELETE' AND OLD.household_id IS NULL THEN
+    RAISE EXCEPTION 'system categories cannot be deleted'
+      USING ERRCODE = '23514';
+  END IF;
+
+  IF TG_OP = 'UPDATE' AND OLD.household_id IS DISTINCT FROM NEW.household_id THEN
+    RAISE EXCEPTION 'category scope cannot be changed'
+      USING ERRCODE = '23514';
+  END IF;
+
+  IF TG_OP = 'UPDATE' AND OLD.household_id IS NULL AND NEW IS DISTINCT FROM OLD THEN
+    RAISE EXCEPTION 'system categories cannot be updated'
+      USING ERRCODE = '23514';
+  END IF;
+
+  IF TG_OP IN ('INSERT', 'UPDATE') THEN
+    IF NEW.household_id IS NOT NULL AND EXISTS (
+        SELECT 1
+        FROM public.categories
+        WHERE categories.household_id IS NULL
+          AND lower(categories.name) = lower(NEW.name)
+      ) THEN
+      RAISE EXCEPTION 'custom category name conflicts with a system category'
+        USING ERRCODE = '23505';
+    END IF;
+  END IF;
+
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
 
   RETURN NEW;
 END;
@@ -75,11 +120,12 @@ CREATE TABLE public.budget_periods (
 
 CREATE TABLE public.categories (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
-    household_id uuid NOT NULL,
+    household_id uuid,
     name text NOT NULL,
     seed_key text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT categories_check CHECK ((((household_id IS NULL) AND (seed_key IS NOT NULL)) OR ((household_id IS NOT NULL) AND (seed_key IS NULL)))),
     CONSTRAINT categories_name_check CHECK ((((char_length(name) >= 1) AND (char_length(name) <= 50)) AND (name !~ '^[[:space:]]'::text) AND (name !~ '[[:space:]]$'::text))),
     CONSTRAINT categories_seed_key_check CHECK ((seed_key = ANY (ARRAY['food'::text, 'daily_goods'::text, 'housing'::text, 'utilities'::text, 'communications'::text, 'transportation'::text, 'medical'::text, 'entertainment'::text, 'other'::text])))
 );
@@ -169,14 +215,6 @@ ALTER TABLE ONLY public.budget_periods
 
 
 --
--- Name: categories categories_household_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.categories
-    ADD CONSTRAINT categories_household_id_id_key UNIQUE (household_id, id);
-
-
---
 -- Name: categories categories_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -260,14 +298,21 @@ ALTER TABLE ONLY public.users
 -- Name: categories_household_lower_name_idx; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX categories_household_lower_name_idx ON public.categories USING btree (household_id, lower(name));
+CREATE UNIQUE INDEX categories_household_lower_name_idx ON public.categories USING btree (household_id, lower(name)) WHERE (household_id IS NOT NULL);
 
 
 --
--- Name: categories_household_seed_key_idx; Type: INDEX; Schema: public; Owner: -
+-- Name: categories_system_lower_name_idx; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX categories_household_seed_key_idx ON public.categories USING btree (household_id, seed_key) WHERE (seed_key IS NOT NULL);
+CREATE UNIQUE INDEX categories_system_lower_name_idx ON public.categories USING btree (lower(name)) WHERE (household_id IS NULL);
+
+
+--
+-- Name: categories_system_seed_key_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX categories_system_seed_key_idx ON public.categories USING btree (seed_key) WHERE (seed_key IS NOT NULL);
 
 
 --
@@ -285,10 +330,24 @@ CREATE INDEX household_members_user_id_idx ON public.household_members USING btr
 
 
 --
--- Name: households households_seed_default_categories; Type: TRIGGER; Schema: public; Owner: -
+-- Name: categories categories_protect_invariants; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER households_seed_default_categories AFTER INSERT ON public.households FOR EACH ROW EXECUTE FUNCTION public.seed_default_categories_for_household();
+CREATE TRIGGER categories_protect_invariants BEFORE INSERT OR DELETE OR UPDATE ON public.categories FOR EACH ROW EXECUTE FUNCTION public.protect_category_invariants();
+
+
+--
+-- Name: expenses expenses_ensure_category_available; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER expenses_ensure_category_available BEFORE INSERT OR UPDATE OF household_id, category_id ON public.expenses FOR EACH ROW EXECUTE FUNCTION public.ensure_category_available_to_household();
+
+
+--
+-- Name: monthly_budgets monthly_budgets_ensure_category_available; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER monthly_budgets_ensure_category_available BEFORE INSERT OR UPDATE OF household_id, category_id ON public.monthly_budgets FOR EACH ROW EXECUTE FUNCTION public.ensure_category_available_to_household();
 
 
 --
@@ -308,11 +367,11 @@ ALTER TABLE ONLY public.categories
 
 
 --
--- Name: expenses expenses_household_id_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: expenses expenses_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.expenses
-    ADD CONSTRAINT expenses_household_id_category_id_fkey FOREIGN KEY (household_id, category_id) REFERENCES public.categories(household_id, id) ON DELETE SET NULL (category_id);
+    ADD CONSTRAINT expenses_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.categories(id) ON DELETE SET NULL;
 
 
 --
@@ -348,11 +407,11 @@ ALTER TABLE ONLY public.households
 
 
 --
--- Name: monthly_budgets monthly_budgets_household_id_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: monthly_budgets monthly_budgets_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.monthly_budgets
-    ADD CONSTRAINT monthly_budgets_household_id_category_id_fkey FOREIGN KEY (household_id, category_id) REFERENCES public.categories(household_id, id) ON DELETE CASCADE;
+    ADD CONSTRAINT monthly_budgets_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.categories(id) ON DELETE CASCADE;
 
 
 --

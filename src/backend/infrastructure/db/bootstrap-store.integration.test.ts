@@ -35,11 +35,50 @@ describe("bootstrap with PostgreSQL", () => {
 	})
 
 	beforeEach(async () => {
-		await inspectionClient.query("TRUNCATE public.users CASCADE")
+		await inspectionClient.query("DELETE FROM public.households")
+		await inspectionClient.query("DELETE FROM public.users")
 	})
 
 	afterAll(async () => {
 		await inspectionClient.end()
+	})
+
+	it("provides the shared initial categories before any user starts", async () => {
+		// Arrange
+		const expectedCategories = [
+			["food", "食費"],
+			["daily_goods", "日用品"],
+			["housing", "住居費"],
+			["utilities", "水道光熱費"],
+			["communications", "通信費"],
+			["transportation", "交通費"],
+			["medical", "医療費"],
+			["entertainment", "娯楽費"],
+			["other", "その他"],
+		]
+
+		// Act
+		const categories = await inspectionClient.query(
+			`SELECT seed_key, name
+			 FROM public.categories
+			 WHERE household_id IS NULL
+			 ORDER BY CASE seed_key
+			   WHEN 'food' THEN 1
+			   WHEN 'daily_goods' THEN 2
+			   WHEN 'housing' THEN 3
+			   WHEN 'utilities' THEN 4
+			   WHEN 'communications' THEN 5
+			   WHEN 'transportation' THEN 6
+			   WHEN 'medical' THEN 7
+			   WHEN 'entertainment' THEN 8
+			   WHEN 'other' THEN 9
+			 END`,
+		)
+
+		// Assert
+		expect(categories.rows.map(({ seed_key, name }) => [seed_key, name])).toEqual(
+			expectedCategories,
+		)
 	})
 
 	it("creates the personal household state once for a first-time user", async () => {
@@ -138,19 +177,23 @@ describe("bootstrap with PostgreSQL", () => {
 		expect(["2026-09-01", "2026-10-01"]).toContain(periods.rows[0].month)
 	})
 
-	it("does not repair an initial category removed outside bootstrap", async () => {
+	it("does not create or modify shared initial categories", async () => {
 		// Arrange
-		await bootstrap("clerk_category_boundary", new Date("2026-09-27T00:00:00.000Z"))
-		await inspectionClient.query("DELETE FROM public.categories WHERE seed_key = 'food'")
+		const before = await inspectionClient.query(
+			"SELECT id, name, seed_key FROM public.categories ORDER BY seed_key",
+		)
 
 		// Act
-		await bootstrap("clerk_category_boundary", new Date("2026-10-27T00:00:00.000Z"))
+		await Promise.all([
+			bootstrap("clerk_category_boundary_one", new Date("2026-09-27T00:00:00.000Z")),
+			bootstrap("clerk_category_boundary_two", new Date("2026-10-27T00:00:00.000Z")),
+		])
 
 		// Assert
-		const categories = await inspectionClient.query(
-			"SELECT count(*)::int AS count FROM public.categories",
+		const after = await inspectionClient.query(
+			"SELECT id, name, seed_key FROM public.categories ORDER BY seed_key",
 		)
-		expect(categories.rows[0]).toEqual({ count: 8 })
+		expect(after.rows).toEqual(before.rows)
 	})
 
 	it("creates isolated personal households for different users", async () => {
@@ -165,10 +208,114 @@ describe("bootstrap with PostgreSQL", () => {
 
 		// Assert
 		const categories = await inspectionClient.query(
-			"SELECT household_id, count(*)::int AS count FROM public.categories GROUP BY household_id",
+			`SELECT
+			   count(*)::int AS count,
+			   count(household_id)::int AS "householdCategoryCount"
+			 FROM public.categories`,
 		)
 		expect(new Set(authorizations.map(({ householdId }) => householdId)).size).toBe(2)
-		expect(categories.rows.map(({ count }) => count)).toEqual([9, 9])
+		expect(categories.rows[0]).toEqual({ count: 9, householdCategoryCount: 0 })
+	})
+
+	it("allows every household to use a shared initial category", async () => {
+		// Arrange
+		const authorizations = await Promise.all([
+			bootstrap("clerk_shared_category_one", new Date("2026-09-27T00:00:00.000Z")),
+			bootstrap("clerk_shared_category_two", new Date("2026-09-27T00:00:00.000Z")),
+		])
+		const category = await inspectionClient.query(
+			"SELECT id FROM public.categories WHERE seed_key = 'food'",
+		)
+		const categoryId = category.rows[0].id
+
+		// Act
+		for (const authorization of authorizations) {
+			await inspectionClient.query(
+				`INSERT INTO public.expenses (household_id, category_id, expense_date, amount)
+				 VALUES ($1, $2, '2026-09-20', 1000)`,
+				[authorization.householdId, categoryId],
+			)
+		}
+
+		// Assert
+		const expenses = await inspectionClient.query(
+			"SELECT count(*)::int AS count FROM public.expenses WHERE category_id = $1",
+			[categoryId],
+		)
+		expect(expenses.rows[0]).toEqual({ count: 2 })
+	})
+
+	it("rejects another household's custom category from expenses and budgets", async () => {
+		// Arrange
+		const [owner, other] = await Promise.all([
+			bootstrap("clerk_custom_category_owner", new Date("2026-09-27T00:00:00.000Z")),
+			bootstrap("clerk_custom_category_other", new Date("2026-09-27T00:00:00.000Z")),
+		])
+		const category = await inspectionClient.query(
+			`INSERT INTO public.categories (household_id, name)
+			 VALUES ($1, '旅行')
+			 RETURNING id`,
+			[owner.householdId],
+		)
+
+		// Act
+		const results = await Promise.allSettled([
+			inspectionClient.query(
+				`INSERT INTO public.expenses (household_id, category_id, expense_date, amount)
+				 VALUES ($1, $2, '2026-09-20', 1000)`,
+				[other.householdId, category.rows[0].id],
+			),
+			inspectionClient.query(
+				`INSERT INTO public.monthly_budgets (household_id, month_start, category_id, amount)
+				 VALUES ($1, '2026-09-01', $2, 10000)`,
+				[other.householdId, category.rows[0].id],
+			),
+		])
+
+		// Assert
+		expect(results).toEqual([
+			{ status: "rejected", reason: expect.objectContaining({ code: "23503" }) },
+			{ status: "rejected", reason: expect.objectContaining({ code: "23503" }) },
+		])
+	})
+
+	it("rejects a custom category with the same name as an initial category", async () => {
+		// Arrange
+		const authorization = await bootstrap(
+			"clerk_duplicate_initial_category",
+			new Date("2026-09-27T00:00:00.000Z"),
+		)
+
+		// Act
+		const insertCategory = inspectionClient.query(
+			"INSERT INTO public.categories (household_id, name) VALUES ($1, '食費')",
+			[authorization.householdId],
+		)
+
+		// Assert
+		await expect(insertCategory).rejects.toMatchObject({ code: "23505" })
+	})
+
+	it("protects shared initial categories from customization", async () => {
+		// Arrange
+		const category = await inspectionClient.query(
+			"SELECT id FROM public.categories WHERE seed_key = 'food'",
+		)
+		const categoryId = category.rows[0].id
+
+		// Act
+		const results = await Promise.allSettled([
+			inspectionClient.query("UPDATE public.categories SET name = '外食' WHERE id = $1", [
+				categoryId,
+			]),
+			inspectionClient.query("DELETE FROM public.categories WHERE id = $1", [categoryId]),
+		])
+
+		// Assert
+		expect(results).toEqual([
+			{ status: "rejected", reason: expect.objectContaining({ code: "23514" }) },
+			{ status: "rejected", reason: expect.objectContaining({ code: "23514" }) },
+		])
 	})
 
 	it("rolls back every record when the first budget period is invalid", async () => {
