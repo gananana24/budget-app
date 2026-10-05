@@ -75,7 +75,8 @@ export function NewExpenseScreen() {
 	const navigate = useNavigate()
 	const today = getTodayInTokyo()
 	const selectedMonth = useRouterState({ select: (state) => state.location.search.month })
-	const month = typeof selectedMonth === "string" ? selectedMonth : getCurrentMonthStartInTokyo()
+	const month =
+		typeof selectedMonth === "string" ? `${selectedMonth}-01` : getCurrentMonthStartInTokyo()
 	const overviewQuery = useQuery(getMonthlyOverviewQueryOptions(apiClient, month))
 	const [calendarOpen, setCalendarOpen] = useState(false)
 	const [values, setValues] = useState<ExpenseFormValues>({
@@ -97,7 +98,7 @@ export function NewExpenseScreen() {
 		onSuccess: async (_created, input) => {
 			const expenseMonth = `${input.date.slice(0, 7)}-01`
 			await queryClient.invalidateQueries({ queryKey: monthlyOverviewQueryKey(expenseMonth) })
-			await navigate({ to: "/expenses", search: { month: expenseMonth } })
+			await navigate({ to: "/expenses", search: { month: expenseMonth.slice(0, 7) } })
 		},
 	})
 
@@ -130,7 +131,7 @@ export function NewExpenseScreen() {
 				<header className="grid min-h-11 grid-cols-[1fr_auto_1fr] items-center gap-2">
 					<Link
 						to="/expenses"
-						search={{ month }}
+						search={{ month: month.slice(0, 7) }}
 						activeOptions={{ exact: true }}
 						className={buttonVariants({
 							variant: "ghost",

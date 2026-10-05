@@ -15,12 +15,12 @@ export function ExpensesScreen() {
 	const navigate = useNavigate()
 	const currentMonth = getCurrentMonthStartInTokyo()
 	const selectedMonth = useRouterState({ select: (state) => state.location.search.month })
-	const month = typeof selectedMonth === "string" ? selectedMonth : currentMonth
+	const month = typeof selectedMonth === "string" ? `${selectedMonth}-01` : currentMonth
 	const listLabel = messages.expenses.monthListTitle({ month: formatMonth(month) })
 	const query = useQuery(getMonthlyOverviewQueryOptions(apiClient, month))
 
 	function moveMonth(offset: number): void {
-		void navigate({ to: "/expenses", search: { month: shiftMonth(month, offset) } })
+		void navigate({ to: "/expenses", search: { month: shiftMonth(month, offset).slice(0, 7) } })
 	}
 
 	return (
@@ -31,7 +31,7 @@ export function ExpensesScreen() {
 				action={
 					<Link
 						to="/expenses/new"
-						search={{ month }}
+						search={{ month: month.slice(0, 7) }}
 						className={buttonVariants({
 							variant: "ghost",
 							size: "lg",
@@ -93,7 +93,7 @@ export function ExpensesScreen() {
 						{query.data.expenses.length === 0 ? (
 							<Link
 								to="/expenses/new"
-								search={{ month }}
+								search={{ month: month.slice(0, 7) }}
 								className={buttonVariants({
 									variant: "secondary",
 									className:

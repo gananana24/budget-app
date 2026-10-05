@@ -193,7 +193,7 @@ describe("expenses screen", () => {
 		expect(screen.getByRole("button", { name: "次の月" })).toBeEnabled()
 		expect(screen.getByRole("link", { name: "追加" })).toHaveAttribute(
 			"href",
-			"/expenses/new?month=2026-09-01",
+			"/expenses/new?month=2026-09",
 		)
 	})
 
@@ -226,7 +226,7 @@ describe("expenses screen", () => {
 		const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 		queryClient.setQueryData(["monthly-overview", "2026-02-01"], februaryOverview)
 		const user = userEvent.setup()
-		const router = renderExpenseFlow(client, queryClient, "/expenses/new?month=2026-02-01")
+		const router = renderExpenseFlow(client, queryClient, "/expenses/new?month=2026-02")
 		await screen.findByRole("button", { name: "日付" })
 		expect(screen.getByRole("button", { name: "日付" })).toHaveTextContent("2026年2月28日")
 
@@ -236,7 +236,7 @@ describe("expenses screen", () => {
 
 		// Assert
 		await waitFor(() => expect(router.state.location.pathname).toBe("/expenses"))
-		expect(router.state.location.search.month).toBe("2026-02-01")
+		expect(router.state.location.search.month).toBe("2026-02")
 		expect(await screen.findByText("2026年2月")).toBeInTheDocument()
 		const postCall = fetch.mock.calls.find(([, init]) => init?.method === "POST")
 		expect(JSON.parse(String(postCall?.[1]?.body)).date).toBe("2026-02-28")
@@ -254,7 +254,7 @@ describe("expenses screen", () => {
 		})
 		const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 		const user = userEvent.setup()
-		renderExpenseFlow(client, queryClient, "/expenses?month=2026-09-01")
+		renderExpenseFlow(client, queryClient, "/expenses?month=2026-09")
 		await screen.findByText("2026年9月")
 
 		// Act
@@ -279,7 +279,7 @@ describe("expenses screen", () => {
 		})
 		const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 		const user = userEvent.setup()
-		const router = renderExpenseFlow(client, queryClient, "/expenses/new?month=2026-09-01")
+		const router = renderExpenseFlow(client, queryClient, "/expenses/new?month=2026-09")
 		await screen.findByRole("heading", { name: "支出を追加" })
 
 		// Act
@@ -287,7 +287,7 @@ describe("expenses screen", () => {
 
 		// Assert
 		await waitFor(() => expect(router.state.location.pathname).toBe("/expenses"))
-		expect(router.state.location.search.month).toBe("2026-09-01")
+		expect(router.state.location.search.month).toBe("2026-09")
 		expect(await screen.findByText("2026年9月")).toBeInTheDocument()
 	})
 })

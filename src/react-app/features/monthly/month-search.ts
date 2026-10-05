@@ -4,8 +4,8 @@ export function validateMonthSearch(search: Record<string, unknown>): { month?: 
 	const value = search.month
 	if (
 		typeof value !== "string" ||
-		!/^\d{4}-(0[1-9]|1[0-2])-01$/.test(value) ||
-		value > getCurrentMonthStartInTokyo()
+		!/^\d{4}-(0[1-9]|1[0-2])$/.test(value) ||
+		value > getCurrentMonthStartInTokyo().slice(0, 7)
 	) {
 		return {}
 	}
