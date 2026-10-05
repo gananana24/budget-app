@@ -42,3 +42,31 @@ export function formatDate(date: Date | string): string {
 export function formatMonth(date: Date | string): string {
 	return monthFormatter.format(typeof date === "string" ? parseCalendarDate(date) : date)
 }
+
+function getTokyoDateParts(date: Date): Readonly<{ year: string; month: string; day: string }> {
+	const parts = new Intl.DateTimeFormat("en-US", {
+		timeZone,
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+	}).formatToParts(date)
+	const year = parts.find((part) => part.type === "year")?.value
+	const month = parts.find((part) => part.type === "month")?.value
+	const day = parts.find((part) => part.type === "day")?.value
+
+	if (!year || !month || !day) {
+		throw new Error("Failed to format a Tokyo calendar date")
+	}
+
+	return { year, month, day }
+}
+
+export function getTodayInTokyo(date = new Date()): string {
+	const { year, month, day } = getTokyoDateParts(date)
+	return `${year}-${month}-${day}`
+}
+
+export function getCurrentMonthStartInTokyo(date = new Date()): string {
+	const { year, month } = getTokyoDateParts(date)
+	return `${year}-${month}-01`
+}

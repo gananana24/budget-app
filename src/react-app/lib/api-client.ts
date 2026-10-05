@@ -107,7 +107,7 @@ export function createApiClient({
 }: ApiClientOptions) {
 	async function fetchApi<T>(
 		path: string,
-		method: "POST",
+		method: "GET" | "POST",
 		body: unknown,
 		options: RequestOptions,
 	): Promise<T> {
@@ -143,6 +143,9 @@ export function createApiClient({
 	}
 
 	return {
+		get<T>(path: string, options: RequestOptions = {}): Promise<T> {
+			return fetchApi<T>(path, "GET", undefined, options)
+		},
 		post<T>(path: string, body?: unknown, options: RequestOptions = {}): Promise<T> {
 			return fetchApi<T>(path, "POST", body, options)
 		},

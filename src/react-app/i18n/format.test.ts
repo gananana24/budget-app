@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest"
-import { formatDate, formatMonth, formatYen } from "./format"
+import {
+	formatDate,
+	formatMonth,
+	formatYen,
+	getCurrentMonthStartInTokyo,
+	getTodayInTokyo,
+} from "./format"
 
 describe("Japanese formatters", () => {
 	it("formats an amount as Japanese yen without decimal places", () => {
@@ -33,5 +39,18 @@ describe("Japanese formatters", () => {
 
 		// Assert
 		expect(formatted).toBe("2026年10月")
+	})
+
+	it("resolves the current date and month in Tokyo", () => {
+		// Arrange
+		const instant = new Date("2026-09-30T15:00:00.000Z")
+
+		// Act
+		const date = getTodayInTokyo(instant)
+		const month = getCurrentMonthStartInTokyo(instant)
+
+		// Assert
+		expect(date).toBe("2026-10-01")
+		expect(month).toBe("2026-10-01")
 	})
 })
