@@ -46,3 +46,21 @@ export async function withPostgresTransaction<Result>(
 		}
 	})
 }
+
+export async function withPostgresReadTransaction<Result>(
+	connectionString: string,
+	operation: (client: Client) => Promise<Result>,
+): Promise<Result> {
+	return withPostgresClient(connectionString, async (client) => {
+		await client.query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+
+		try {
+			const result = await operation(client)
+			await client.query("COMMIT")
+			return result
+		} catch (error) {
+			await client.query("ROLLBACK")
+			throw error
+		}
+	})
+}

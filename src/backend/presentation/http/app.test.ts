@@ -19,6 +19,21 @@ function createAuthorizationContext(): AuthorizationContext {
 	)
 }
 
+function unusedMonthlyDependencies() {
+	return {
+		resolveAuthorizationUseCase: {
+			execute: async () => {
+				throw new Error("Authorization is not expected in this test")
+			},
+		},
+		getMonthlyOverviewUseCase: {
+			execute: async () => {
+				throw new Error("Monthly overview is not expected in this test")
+			},
+		},
+	}
+}
+
 function expectedFields(code: string): Readonly<Record<string, string>> {
 	if (code === "VALIDATION_ERROR") {
 		return { reason: "OUT_OF_RANGE" }
@@ -42,6 +57,7 @@ function expectedMessage(code: string): string {
 describe("HTTP app", () => {
 	function createAuthenticatedApp() {
 		return createHttpApp({
+			...unusedMonthlyDependencies(),
 			authenticationMiddleware: [createAuthenticatedUserMiddleware(() => "clerk_user_verified")],
 			bootstrapUseCase: {
 				execute: async () => {
@@ -121,6 +137,7 @@ describe("HTTP app", () => {
 	it("rejects an unauthenticated API request before routing", async () => {
 		// Arrange
 		const app = createHttpApp({
+			...unusedMonthlyDependencies(),
 			authenticationMiddleware: [createAuthenticatedUserMiddleware(() => null)],
 			bootstrapUseCase: {
 				execute: async () => {
@@ -146,6 +163,7 @@ describe("HTTP app", () => {
 	it("rejects a malformed authenticated user ID as unauthorized", async () => {
 		// Arrange
 		const app = createHttpApp({
+			...unusedMonthlyDependencies(),
 			authenticationMiddleware: [createAuthenticatedUserMiddleware(() => "   ")],
 			bootstrapUseCase: {
 				execute: async () => {
@@ -171,6 +189,7 @@ describe("HTTP app", () => {
 	it("leaves non-API routes public for the application shell", async () => {
 		// Arrange
 		const app = createHttpApp({
+			...unusedMonthlyDependencies(),
 			authenticationMiddleware: [createAuthenticatedUserMiddleware(() => null)],
 			bootstrapUseCase: {
 				execute: async () => {
@@ -220,6 +239,7 @@ describe("HTTP app", () => {
 		// Arrange
 		let bootstrappedClerkUserId: string | undefined
 		const app = createHttpApp({
+			...unusedMonthlyDependencies(),
 			authenticationMiddleware: [createAuthenticatedUserMiddleware(() => "clerk_user_verified")],
 			bootstrapUseCase: {
 				execute: async (clerkUserId) => {
@@ -245,5 +265,50 @@ describe("HTTP app", () => {
 		expect(response.status).toBe(204)
 		expect(await response.text()).toBe("")
 		expect(bootstrappedClerkUserId).toBe("clerk_user_verified")
+	})
+
+	it("returns the authenticated household monthly overview", async () => {
+		// Arrange
+		const authorization = createAuthorizationContext()
+		let resolvedClerkUserId: string | undefined
+		let requestedMonth: unknown
+		const overview = {
+			month: "2026-09-01",
+			initialized: false,
+			totals: { budget: 0, expenses: 1_200, remaining: -1_200 },
+			uncategorized: { expenses: 1_200 },
+			categories: [],
+			expenses: [],
+		}
+		const app = createHttpApp({
+			authenticationMiddleware: [createAuthenticatedUserMiddleware(() => "clerk_user_verified")],
+			bootstrapUseCase: {
+				execute: async () => {
+					throw new Error("Bootstrap is not expected in this test")
+				},
+			},
+			resolveAuthorizationUseCase: {
+				execute: async (clerkUserId) => {
+					resolvedClerkUserId = clerkUserId.value
+					return authorization
+				},
+			},
+			getMonthlyOverviewUseCase: {
+				execute: async (input) => {
+					requestedMonth = input.month
+					expect(input.authorization).toBe(authorization)
+					return overview
+				},
+			},
+		})
+
+		// Act
+		const response = await app.request("/api/months/2026-09-01")
+
+		// Assert
+		expect(response.status).toBe(200)
+		expect(await response.json()).toEqual(overview)
+		expect(resolvedClerkUserId).toBe("clerk_user_verified")
+		expect(requestedMonth).toBe("2026-09-01")
 	})
 })
