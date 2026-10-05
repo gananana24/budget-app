@@ -8,6 +8,10 @@
 	"files": {
 		"includes": [
 			"src/**/*.{js,jsx,ts,tsx}",
+			"!src/react-app/paraglide",
+			"!src/react-app/app/route-tree.gen.ts",
+			"!src/react-app/components/ui",
+			"!src/react-app/lib/utils.ts",
 			"scripts/**/*.ts",
 			"vite.config.ts",
 			"vitest.config.ts"

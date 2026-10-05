@@ -1,8 +1,10 @@
+import { jaJP } from "@clerk/localizations"
 import { ClerkProvider } from "@clerk/react"
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 import "./index.css"
-import App from "./App.tsx"
+import "./App.css"
+import { App } from "./app/app"
 
 const root = document.getElementById("root")
 if (!root) {
@@ -16,7 +18,7 @@ if (!clerkPublishableKey) {
 
 createRoot(root).render(
 	<StrictMode>
-		<ClerkProvider publishableKey={clerkPublishableKey}>
+		<ClerkProvider publishableKey={clerkPublishableKey} localization={jaJP}>
 			<App />
 		</ClerkProvider>
 	</StrictMode>,

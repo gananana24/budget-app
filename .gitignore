@@ -200,3 +200,6 @@ dist
 
 # Vitest reports and artifacts
 .vitest/
+
+# Local design explorations
+design/issue-6-mocks/

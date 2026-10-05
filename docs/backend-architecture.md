@@ -200,8 +200,8 @@ export function newCreateExpenseUseCase(
 - HTTP routeは機能ごとのhandlerに登録する。
 - schemaはHTTP requestとresponseの構造を表し、EntityをそのままJSON化しない。
 - handlerは外部入力を検証して必要なDomainの値へ変換し、DIからUseCaseを取得して`execute`する。
-- Domain ExceptionをHTTP statusと安定したエラーコードへ変換する。
-- 利用者向け日本語文言はAPIレスポンスに埋め込まず、フロントエンドの文言リソースで管理する。
+- Domain ExceptionをHTTP status、安定したエラーコード、安全な利用者向け日本語メッセージへ変換する。
+- APIエラーのコードと日本語メッセージはPresentationで一元管理し、内部の例外メッセージはレスポンスへ使用しない。
 - 認証済みClerk利用者IDだけを内部のUserIdへ解決し、クライアントが送る利用者IDや家計IDを信用しない。
 
 ## Worker Layer
