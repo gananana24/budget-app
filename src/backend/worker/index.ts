@@ -12,6 +12,8 @@ export default {
 				createAuthenticatedUserMiddleware((context) => getAuth(context).userId),
 			],
 			bootstrapUseCase: dependencies.bootstrapUseCase,
+			resolveAuthorizationUseCase: dependencies.resolveAuthorizationUseCase,
+			getMonthlyOverviewUseCase: dependencies.getMonthlyOverviewUseCase,
 		})
 
 		return await app.fetch(request, env, executionContext)

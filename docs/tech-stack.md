@@ -307,6 +307,8 @@ MVPでは入力者の利用者IDを保存しない。
 | `GET /api/months/:month` | 指定月の予算、支出、月全体と費目別の集計を取得する。未初期化の過去月は書き込まず、未設定として返す。 |
 | `GET /api/months/:month/budget-draft` | 未初期化月の予算編集用に、それより前で最も新しい初期化済み月から下書きを返す。DBは変更しない。 |
 
+`GET /api/months/:month`は、対象月と予算期間の有無を`month`・`initialized`、月全体の予算・支出・残額を`totals`、未分類支出額を`uncategorized.expenses`として返す。費目ごとの`budget`は`{ "status": "unset" }`または`{ "status": "set", "amount": 0 }`のような判別可能な形とし、未設定と明示的な0円を区別する。未設定費目の`remaining`は`null`とする。`expenses`は`categoryId: null`で未分類を表し、支出日・作成時刻・IDの降順で返す。
+
 ### 支出
 
 | メソッド・パス | 用途 |

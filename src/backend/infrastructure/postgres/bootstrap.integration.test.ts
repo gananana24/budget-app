@@ -59,6 +59,7 @@ describe("bootstrap with PostgreSQL", () => {
 
 	beforeAll(async () => {
 		await inspectionClient.connect()
+		await inspectionClient.query("SELECT pg_advisory_lock(742001)")
 	})
 
 	beforeEach(async () => {
@@ -67,6 +68,7 @@ describe("bootstrap with PostgreSQL", () => {
 	})
 
 	afterAll(async () => {
+		await inspectionClient.query("SELECT pg_advisory_unlock(742001)")
 		await inspectionClient.end()
 	})
 
