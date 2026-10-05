@@ -15,6 +15,12 @@ const dateFormatter = new Intl.DateTimeFormat(locale, {
 	timeZone,
 })
 
+const shortDateFormatter = new Intl.DateTimeFormat(locale, {
+	month: "long",
+	day: "numeric",
+	timeZone,
+})
+
 const monthFormatter = new Intl.DateTimeFormat(locale, {
 	year: "numeric",
 	month: "long",
@@ -37,6 +43,10 @@ export function formatYen(amount: number): string {
 
 export function formatDate(date: Date | string): string {
 	return dateFormatter.format(typeof date === "string" ? parseCalendarDate(date) : date)
+}
+
+export function formatShortDate(date: Date | string): string {
+	return shortDateFormatter.format(typeof date === "string" ? parseCalendarDate(date) : date)
 }
 
 export function formatMonth(date: Date | string): string {
@@ -69,4 +79,21 @@ export function getTodayInTokyo(date = new Date()): string {
 export function getCurrentMonthStartInTokyo(date = new Date()): string {
 	const { year, month } = getTokyoDateParts(date)
 	return `${year}-${month}-01`
+}
+
+export function shiftMonth(monthStart: string, offset: number): string {
+	const [year, month] = monthStart.split("-").map(Number)
+	return `${new Date(Date.UTC(year, month - 1 + offset, 1)).toISOString().slice(0, 7)}-01`
+}
+
+export function suggestDateInMonth(monthStart: string, today: string): string {
+	if (monthStart === `${today.slice(0, 7)}-01`) {
+		return today
+	}
+	const [year, month] = monthStart.split("-").map(Number)
+	const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate()
+	const day = Math.min(Number(today.slice(-2)), lastDay)
+		.toString()
+		.padStart(2, "0")
+	return `${monthStart.slice(0, 7)}-${day}`
 }

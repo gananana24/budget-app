@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { Screen } from "../../components/screen"
-import { formatYen, getCurrentMonthStartInTokyo } from "../../i18n/format"
+import { Plus } from "lucide-react"
+import { Button, buttonVariants } from "../../components/ui/button"
+import { formatMonth, formatYen, getCurrentMonthStartInTokyo } from "../../i18n/format"
 import { formatDocumentTitle, messages } from "../../i18n/messages"
 import { useApiClient } from "../../lib/api-client-context"
-import { ExpenseList } from "../expenses/expense-list"
 import { getMonthlyOverviewQueryOptions } from "../monthly/api/monthly-overview"
+import { ExpenseList } from "../monthly/components/expense-list"
 
 export function HomeScreen() {
 	const title = messages.home.title()
@@ -16,17 +17,7 @@ export function HomeScreen() {
 	return (
 		<>
 			<title>{formatDocumentTitle(title)}</title>
-			<Screen
-				title={title}
-				action={
-					<Link
-						to="/expenses"
-						className="app-action-link inline-flex min-h-11 items-center rounded-lg px-4 text-sm font-medium"
-					>
-						{messages.home.addExpense()}
-					</Link>
-				}
-			>
+			<main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-md px-6 pb-28 pt-5">
 				{query.isPending ? (
 					<p role="status" className="app-text-muted py-12 text-sm">
 						{messages.monthly.loading()}
@@ -40,37 +31,60 @@ export function HomeScreen() {
 								? query.error.message
 								: messages.bootstrap.invalidResponseDescription()}
 						</p>
-						<button
-							type="button"
-							className="app-button mt-5 min-h-11 rounded-lg px-5 text-sm font-medium"
-							onClick={() => void query.refetch()}
-						>
+						<Button type="button" className="mt-5 min-h-11" onClick={() => void query.refetch()}>
 							{messages.action.retry()}
-						</button>
+						</Button>
 					</div>
 				) : null}
 				{query.data ? (
 					<>
 						<section aria-labelledby="monthly-spending-heading">
-							<p id="monthly-spending-heading" className="app-text-muted text-sm font-medium">
-								{messages.home.spentLabel()}
+							<p className="text-[0.8125rem] font-semibold text-[var(--budget-primary)]">
+								{formatMonth(month)}
 							</p>
-							<p className="app-text-ink mt-2 text-4xl font-semibold tracking-tight tabular-nums">
+							<h1
+								id="monthly-spending-heading"
+								className="app-text-muted mt-9 text-[0.8125rem] font-semibold"
+							>
+								{messages.home.spentLabel()}
+							</h1>
+							<p className="app-text-ink mt-2 text-[clamp(2.4rem,11vw,3.2rem)] leading-none font-semibold tracking-[-0.055em] tabular-nums">
 								{formatYen(query.data.totals.expenses)}
 							</p>
 						</section>
-						<section
-							className="app-divider mt-10 border-t pt-6"
-							aria-labelledby="expense-list-heading"
+						<Link
+							to="/expenses/new"
+							className={buttonVariants({
+								variant: "secondary",
+								className:
+									"mt-9 h-14 w-full bg-[var(--budget-primary)]/12 text-[0.9375rem] font-semibold text-[var(--budget-primary)] hover:bg-[var(--budget-primary)]/20",
+							})}
 						>
+							<Plus aria-hidden="true" />
+							{messages.home.addExpense()}
+						</Link>
+						<section className="mt-18" aria-labelledby="expense-list-heading">
 							<h2 id="expense-list-heading" className="app-text-ink text-lg font-semibold">
-								{messages.monthly.expenseListTitle()}
+								{messages.home.recentExpensesTitle()}
 							</h2>
-							<ExpenseList overview={query.data} />
+							<ExpenseList
+								overview={query.data}
+								expenses={query.data.expenses.slice(0, 3)}
+								label={messages.home.recentExpensesTitle()}
+							/>
+							<Link
+								to="/expenses"
+								className="app-text-ink mt-4 inline-flex min-h-11 items-center text-[0.8125rem] font-semibold"
+							>
+								{messages.home.allExpenses()}{" "}
+								<span aria-hidden="true" className="ml-2">
+									→
+								</span>
+							</Link>
 						</section>
 					</>
 				) : null}
-			</Screen>
+			</main>
 		</>
 	)
 }

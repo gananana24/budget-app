@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { ExpensesScreen } from "../../features/expenses/expenses-screen"
+import { NewExpenseScreen } from "../../features/expenses/new-expense-screen"
 import { validateMonthSearch } from "../../features/monthly/month-search"
 
-export const Route = createFileRoute("/_app/expenses")({
+export const Route = createFileRoute("/_app/expenses_/new")({
 	validateSearch: validateMonthSearch,
-	component: ExpensesScreen,
+	component: NewExpenseScreen,
 })

@@ -36,6 +36,8 @@ export const messages = {
 		emptyTitle: generatedMessages.homeNoExpensesTitle,
 		emptyDescription: generatedMessages.homeNoExpensesDescription,
 		addExpense: generatedMessages.homeAddExpense,
+		recentExpensesTitle: generatedMessages.homeRecentExpensesTitle,
+		allExpenses: generatedMessages.homeAllExpenses,
 	},
 	monthly: {
 		loading: generatedMessages.monthlyLoading,
@@ -45,6 +47,10 @@ export const messages = {
 	},
 	expenses: {
 		title: generatedMessages.expensesTitle,
+		add: generatedMessages.expensesAdd,
+		previousMonth: generatedMessages.expensesPreviousMonth,
+		nextMonth: generatedMessages.expensesNextMonth,
+		monthListTitle: generatedMessages.expensesMonthListTitle,
 		emptyTitle: generatedMessages.expensesEmptyTitle,
 		emptyDescription: generatedMessages.expensesEmptyDescription,
 		formTitle: generatedMessages.expensesFormTitle,
