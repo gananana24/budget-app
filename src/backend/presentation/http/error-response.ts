@@ -1,6 +1,7 @@
 import type { Context } from "hono"
 import { UnauthorizedError } from "../../domain/authentication/exceptions/unauthorized-error"
 import { BootstrapRequiredError } from "../../domain/authorization/exceptions/bootstrap-required-error"
+import { ExpenseCategoryNotFoundError } from "../../domain/expense/exceptions/expense-category-not-found-error"
 import { InvalidValueError } from "../../domain/shared/exceptions/invalid-value-error"
 import { type ErrorCode, errorMessages } from "./error-messages"
 
@@ -26,7 +27,17 @@ export function domainErrorResponse(error: unknown, context: Context): Response 
 	}
 
 	if (error instanceof InvalidValueError) {
-		return context.json(errorBody("VALIDATION_ERROR", { reason: error.reason }), 400)
+		return context.json(
+			errorBody("VALIDATION_ERROR", {
+				reason: error.reason,
+				...(error.field ? { field: error.field } : {}),
+			}),
+			400,
+		)
+	}
+
+	if (error instanceof ExpenseCategoryNotFoundError) {
+		return context.json(errorBody("NOT_FOUND"), 404)
 	}
 
 	return null

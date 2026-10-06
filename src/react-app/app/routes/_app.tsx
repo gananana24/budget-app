@@ -16,8 +16,13 @@ function AppLayout() {
 			<a className="skip-link" href="#main-content">
 				{messages.action.skipToContent()}
 			</a>
+			<header className="mx-auto flex min-h-20 max-w-md items-center px-6 pt-[env(safe-area-inset-top)]">
+				<p className="text-base font-bold tracking-tight text-[var(--budget-primary)]">
+					{messages.app.name()}
+				</p>
+			</header>
 			<Outlet />
-			<BottomNavigation />
+			{pathname !== "/expenses/new" ? <BottomNavigation /> : null}
 		</div>
 	)
 }

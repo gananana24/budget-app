@@ -2,6 +2,27 @@ import { describe, expect, it, vi } from "vitest"
 import { ApiError, createApiClient } from "./api-client"
 
 describe("API client", () => {
+	it("sends an authenticated GET request without a JSON body", async () => {
+		// Arrange
+		const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(Response.json({ value: 1 }))
+		const client = createApiClient({
+			fetch,
+			getToken: async () => "session-token",
+			networkErrorMessage: "通信エラー",
+			invalidResponseMessage: "応答エラー",
+		})
+
+		// Act
+		const result = await client.get<{ value: number }>("/api/months/2026-10-01")
+
+		// Assert
+		expect(result).toEqual({ value: 1 })
+		const [, init] = fetch.mock.calls[0]
+		expect(init?.method).toBe("GET")
+		expect(init?.body).toBeUndefined()
+		expect(new Headers(init?.headers).get("Authorization")).toBe("Bearer session-token")
+	})
+
 	it("attaches the Clerk session token and accepts an empty success response", async () => {
 		// Arrange
 		const fetch = vi

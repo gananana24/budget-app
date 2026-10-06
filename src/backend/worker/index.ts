@@ -13,6 +13,7 @@ export default {
 			],
 			bootstrapUseCase: dependencies.bootstrapUseCase,
 			resolveAuthorizationUseCase: dependencies.resolveAuthorizationUseCase,
+			createExpenseUseCase: dependencies.createExpenseUseCase,
 			getMonthlyOverviewUseCase: dependencies.getMonthlyOverviewUseCase,
 		})
 

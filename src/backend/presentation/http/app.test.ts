@@ -31,6 +31,11 @@ function unusedMonthlyDependencies() {
 				throw new Error("Monthly overview is not expected in this test")
 			},
 		},
+		createExpenseUseCase: {
+			execute: async () => {
+				throw new Error("Expense creation is not expected in this test")
+			},
+		},
 	}
 }
 
@@ -300,6 +305,11 @@ describe("HTTP app", () => {
 					return overview
 				},
 			},
+			createExpenseUseCase: {
+				execute: async () => {
+					throw new Error("Expense creation is not expected in this test")
+				},
+			},
 		})
 
 		// Act
@@ -310,5 +320,82 @@ describe("HTTP app", () => {
 		expect(await response.json()).toEqual(overview)
 		expect(resolvedClerkUserId).toBe("clerk_user_verified")
 		expect(requestedMonth).toBe("2026-09-01")
+	})
+
+	it("creates an expense for the authenticated household", async () => {
+		// Arrange
+		const authorization = createAuthorizationContext()
+		let receivedInput: Record<string, unknown> | undefined
+		const createdExpense = {
+			id: "00000000-0000-4000-8000-000000000003",
+			date: "2026-10-05",
+			amount: 1_200,
+			categoryId: null,
+			memo: "夕食",
+		}
+		const app = createHttpApp({
+			...unusedMonthlyDependencies(),
+			authenticationMiddleware: [createAuthenticatedUserMiddleware(() => "clerk_user_verified")],
+			bootstrapUseCase: {
+				execute: async () => {
+					throw new Error("Bootstrap is not expected in this test")
+				},
+			},
+			resolveAuthorizationUseCase: {
+				execute: async () => authorization,
+			},
+			createExpenseUseCase: {
+				execute: async (input) => {
+					receivedInput = input
+					return createdExpense
+				},
+			},
+		})
+
+		// Act
+		const response = await app.request("/api/expenses", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({
+				date: "2026-10-05",
+				amount: 1_200,
+				categoryId: null,
+				memo: "  夕食  ",
+				householdId: "client-controlled-household",
+			}),
+		})
+
+		// Assert
+		expect(response.status).toBe(201)
+		expect(await response.json()).toEqual(createdExpense)
+		expect(receivedInput).toEqual({
+			authorization,
+			date: "2026-10-05",
+			amount: 1_200,
+			categoryId: null,
+			memo: "  夕食  ",
+		})
+	})
+
+	it("rejects malformed expense JSON with a validation response", async () => {
+		// Arrange
+		const app = createAuthenticatedApp()
+
+		// Act
+		const response = await app.request("/api/expenses", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: "{invalid",
+		})
+
+		// Assert
+		expect(response.status).toBe(400)
+		expect(await response.json()).toEqual({
+			error: {
+				code: "VALIDATION_ERROR",
+				message: "入力内容を確認してください。",
+				fields: { reason: "INVALID_FORMAT" },
+			},
+		})
 	})
 })

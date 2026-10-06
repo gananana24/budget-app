@@ -6,6 +6,7 @@ import { bootstrap } from "../features/bootstrap/api/bootstrap"
 import { BootstrapGate } from "../features/bootstrap/bootstrap-gate"
 import { messages } from "../i18n/messages"
 import { createApiClient } from "../lib/api-client"
+import { ApiClientProvider } from "../lib/api-client-context"
 import { AppRouter } from "./app-router"
 import { createAppQueryClient } from "./query-client"
 
@@ -42,9 +43,11 @@ function AuthenticatedSession({ userId, getToken }: AuthenticatedSessionProps) {
 
 	return (
 		<QueryClientProvider client={queryClient}>
-			<BootstrapGate userId={userId} bootstrap={() => bootstrap(apiClient)}>
-				<AppRouter />
-			</BootstrapGate>
+			<ApiClientProvider client={apiClient}>
+				<BootstrapGate userId={userId} bootstrap={() => bootstrap(apiClient)}>
+					<AppRouter />
+				</BootstrapGate>
+			</ApiClientProvider>
 		</QueryClientProvider>
 	)
 }
