@@ -337,7 +337,20 @@ describe("expenses screen", () => {
 				updatedAt: "2026-10-04",
 			},
 		]
-		const overview = { ...EMPTY_OVERVIEW, expenses }
+		const overview = {
+			...EMPTY_OVERVIEW,
+			categories: [
+				...EMPTY_OVERVIEW.categories,
+				{
+					id: "00000000-0000-4000-8000-000000000021",
+					name: "日用品",
+					budget: { status: "unset" as const },
+					expenses: 0,
+					remaining: null,
+				},
+			],
+			expenses,
+		}
 		const client = createApiClient({
 			fetch: vi.fn<typeof globalThis.fetch>(async () => Response.json(overview)),
 			getToken: async () => "session-token",
@@ -355,6 +368,7 @@ describe("expenses screen", () => {
 		// Assert
 		expect(screen.getByText("その他")).toBeInTheDocument()
 		expect(screen.queryByText("昼食")).not.toBeInTheDocument()
+		expect(screen.queryByRole("button", { name: "日用品" })).not.toBeInTheDocument()
 		expect(screen.getByRole("button", { name: "未分類" })).toHaveAttribute("aria-pressed", "true")
 		expect(screen.queryByText("費目で絞り込む")).not.toBeInTheDocument()
 	})

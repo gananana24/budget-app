@@ -36,7 +36,7 @@ export function ExpenseList({
 		<ul className="mt-4 divide-y app-divider" aria-label={label}>
 			{expenses.map((expense) => {
 				const categoryName = expense.categoryId
-					? (categoryNames.get(expense.categoryId) ?? messages.monthly.uncategorized())
+					? (categoryNames.get(expense.categoryId) ?? messages.expenses.hiddenCategory())
 					: messages.monthly.uncategorized()
 				return (
 					<li key={expense.id}>

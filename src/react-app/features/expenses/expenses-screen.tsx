@@ -23,19 +23,32 @@ export function ExpensesScreen() {
 	const month = typeof selectedMonth === "string" ? `${selectedMonth}-01` : currentMonth
 	const listLabel = messages.expenses.monthListTitle({ month: formatMonth(month) })
 	const query = useQuery(getMonthlyOverviewQueryOptions(apiClient, month))
-	const filteredExpenses =
-		query.data?.expenses.filter((expense) => {
-			if (filter === ALL_CATEGORIES) return true
-			if (filter === UNCATEGORIZED) return expense.categoryId === null
-			return expense.categoryId === filter
-		}) ?? []
+	const presentCategoryIds = new Set(
+		query.data?.expenses.flatMap((expense) => (expense.categoryId ? [expense.categoryId] : [])) ??
+			[],
+	)
+	const listedCategoryIds = new Set(query.data?.categories.map((category) => category.id) ?? [])
 	const filters = query.data
 		? [
 				{ id: ALL_CATEGORIES, label: messages.expenses.filterAll() },
-				{ id: UNCATEGORIZED, label: messages.monthly.uncategorized() },
-				...query.data.categories.map((category) => ({ id: category.id, label: category.name })),
+				...(query.data.expenses.some((expense) => expense.categoryId === null)
+					? [{ id: UNCATEGORIZED, label: messages.monthly.uncategorized() }]
+					: []),
+				...query.data.categories
+					.filter((category) => presentCategoryIds.has(category.id))
+					.map((category) => ({ id: category.id, label: category.name })),
+				...[...presentCategoryIds]
+					.filter((id) => !listedCategoryIds.has(id))
+					.map((id) => ({ id, label: messages.expenses.hiddenCategory() })),
 			]
 		: []
+	const activeFilter = filters.some((item) => item.id === filter) ? filter : ALL_CATEGORIES
+	const filteredExpenses =
+		query.data?.expenses.filter((expense) => {
+			if (activeFilter === ALL_CATEGORIES) return true
+			if (activeFilter === UNCATEGORIZED) return expense.categoryId === null
+			return expense.categoryId === activeFilter
+		}) ?? []
 
 	function moveMonth(offset: number): void {
 		setFilter(ALL_CATEGORIES)
@@ -119,12 +132,12 @@ export function ExpensesScreen() {
 											<Button
 												key={item.id}
 												type="button"
-												variant={filter === item.id ? "default" : "outline"}
-												aria-pressed={filter === item.id}
+												variant="outline"
+												aria-pressed={activeFilter === item.id}
 												className={
-													filter === item.id
-														? "min-h-11 shrink-0 rounded-full bg-[var(--budget-primary)] px-4 text-white hover:bg-[var(--budget-primary)]/90"
-														: "min-h-11 shrink-0 rounded-full px-4"
+													activeFilter === item.id
+														? "min-h-11 shrink-0 rounded-full border-[var(--budget-primary)]/30 bg-[var(--budget-primary)]/10 px-4 font-semibold text-[var(--budget-primary)] hover:bg-[var(--budget-primary)]/15"
+														: "min-h-11 shrink-0 rounded-full border-border bg-background px-4 text-muted-foreground"
 												}
 												onClick={() => setFilter(item.id)}
 											>
