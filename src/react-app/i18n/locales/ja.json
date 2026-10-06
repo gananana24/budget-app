@@ -45,7 +45,7 @@
 	"expensesDeleteTitle": "この支出を削除しますか？",
 	"expensesDeleteDescription": "「{name}」・{date}・{amount}を削除します。この操作は取り消せません。",
 	"expensesCancel": "キャンセル",
-	"expensesFilterAll": "すべての費目",
+	"expensesFilterAll": "すべて",
 	"expensesFilteredEmpty": "この費目の支出はありません。",
 	"expensesResultCount": "{count}件",
 	"expensesClearFilter": "すべて表示",

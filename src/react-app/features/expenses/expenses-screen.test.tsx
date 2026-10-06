@@ -69,7 +69,7 @@ describe("expenses screen", () => {
 
 		// Assert
 		expect(screen.queryByRole("group", { name: "費目" })).not.toBeInTheDocument()
-		expect(screen.queryByRole("button", { name: "すべての費目" })).not.toBeInTheDocument()
+		expect(screen.queryByRole("button", { name: "すべて" })).not.toBeInTheDocument()
 		expect(screen.getByRole("link", { name: "支出を追加" })).toBeInTheDocument()
 	})
 
@@ -371,6 +371,53 @@ describe("expenses screen", () => {
 		expect(screen.queryByRole("button", { name: "日用品" })).not.toBeInTheDocument()
 		expect(screen.getByRole("button", { name: "未分類" })).toHaveAttribute("aria-pressed", "true")
 		expect(screen.queryByText("費目で絞り込む")).not.toBeInTheDocument()
+	})
+
+	it("groups expenses from unavailable categories into one filter", async () => {
+		// Arrange
+		vi.useFakeTimers({ toFake: ["Date"] })
+		vi.setSystemTime(new Date("2026-10-05T00:00:00.000Z"))
+		const expenses = [
+			{
+				id: "expense-hidden-one",
+				date: "2026-10-05",
+				amount: 500,
+				categoryId: "00000000-0000-4000-8000-000000000091",
+				memo: "旧費目の支出1",
+				createdAt: "2026-10-05",
+				updatedAt: "2026-10-05",
+			},
+			{
+				id: "expense-hidden-two",
+				date: "2026-10-04",
+				amount: 300,
+				categoryId: "00000000-0000-4000-8000-000000000092",
+				memo: "旧費目の支出2",
+				createdAt: "2026-10-04",
+				updatedAt: "2026-10-04",
+			},
+		]
+		const client = createApiClient({
+			fetch: vi.fn<typeof globalThis.fetch>(async () =>
+				Response.json({ ...EMPTY_OVERVIEW, expenses }),
+			),
+			getToken: async () => "session-token",
+			networkErrorMessage: "通信エラー",
+			invalidResponseMessage: "応答エラー",
+		})
+		const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+		const user = userEvent.setup()
+		renderExpenseFlow(client, queryClient, "/expenses")
+		await screen.findByText("旧費目の支出1")
+
+		// Act
+		await user.click(screen.getByRole("button", { name: "現在は表示されない費目" }))
+
+		// Assert
+		expect(screen.getAllByRole("button", { name: "現在は表示されない費目" })).toHaveLength(1)
+		expect(screen.getByText("旧費目の支出1")).toBeInTheDocument()
+		expect(screen.getByText("旧費目の支出2")).toBeInTheDocument()
+		expect(screen.getByText("2件")).toBeInTheDocument()
 	})
 
 	it("allows cancelling deletion and refreshes the list after confirmation", async () => {

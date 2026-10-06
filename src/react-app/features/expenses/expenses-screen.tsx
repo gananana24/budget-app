@@ -12,6 +12,7 @@ import { ExpenseList } from "../monthly/components/expense-list"
 
 const ALL_CATEGORIES = "all"
 const UNCATEGORIZED = "uncategorized"
+const HIDDEN_CATEGORIES = "hidden"
 
 export function ExpensesScreen() {
 	const title = messages.expenses.title()
@@ -37,9 +38,9 @@ export function ExpensesScreen() {
 				...query.data.categories
 					.filter((category) => presentCategoryIds.has(category.id))
 					.map((category) => ({ id: category.id, label: category.name })),
-				...[...presentCategoryIds]
-					.filter((id) => !listedCategoryIds.has(id))
-					.map((id) => ({ id, label: messages.expenses.hiddenCategory() })),
+				...([...presentCategoryIds].some((id) => !listedCategoryIds.has(id))
+					? [{ id: HIDDEN_CATEGORIES, label: messages.expenses.hiddenCategory() }]
+					: []),
 			]
 		: []
 	const activeFilter = filters.some((item) => item.id === filter) ? filter : ALL_CATEGORIES
@@ -47,6 +48,8 @@ export function ExpensesScreen() {
 		query.data?.expenses.filter((expense) => {
 			if (activeFilter === ALL_CATEGORIES) return true
 			if (activeFilter === UNCATEGORIZED) return expense.categoryId === null
+			if (activeFilter === HIDDEN_CATEGORIES)
+				return expense.categoryId !== null && !listedCategoryIds.has(expense.categoryId)
 			return expense.categoryId === activeFilter
 		}) ?? []
 
