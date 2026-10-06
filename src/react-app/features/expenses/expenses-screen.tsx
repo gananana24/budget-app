@@ -108,32 +108,36 @@ export function ExpensesScreen() {
 				) : null}
 				{query.data ? (
 					<section className="mt-8" aria-label={listLabel}>
-						<p id="expense-filter-label" className="app-text-muted mb-3 text-sm font-medium">
-							{messages.expenses.filterLabel()}
-						</p>
-						<fieldset aria-labelledby="expense-filter-label" className="-mx-6 min-w-0 border-0 p-0">
-							<div className="flex gap-2 overflow-x-auto px-6 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-								{filters.map((item) => (
-									<Button
-										key={item.id}
-										type="button"
-										variant={filter === item.id ? "default" : "outline"}
-										aria-pressed={filter === item.id}
-										className={
-											filter === item.id
-												? "min-h-11 shrink-0 rounded-full bg-[var(--budget-primary)] px-4 text-white hover:bg-[var(--budget-primary)]/90"
-												: "min-h-11 shrink-0 rounded-full px-4"
-										}
-										onClick={() => setFilter(item.id)}
-									>
-										{item.label}
-									</Button>
-								))}
-							</div>
-						</fieldset>
-						<p className="app-text-muted mt-3 text-xs tabular-nums" aria-live="polite">
-							{messages.expenses.resultCount({ count: filteredExpenses.length })}
-						</p>
+						{query.data.expenses.length > 0 ? (
+							<>
+								<fieldset
+									aria-label={messages.expenses.categoryLabel()}
+									className="-mx-6 min-w-0 border-0 p-0"
+								>
+									<div className="flex gap-2 overflow-x-auto px-6 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+										{filters.map((item) => (
+											<Button
+												key={item.id}
+												type="button"
+												variant={filter === item.id ? "default" : "outline"}
+												aria-pressed={filter === item.id}
+												className={
+													filter === item.id
+														? "min-h-11 shrink-0 rounded-full bg-[var(--budget-primary)] px-4 text-white hover:bg-[var(--budget-primary)]/90"
+														: "min-h-11 shrink-0 rounded-full px-4"
+												}
+												onClick={() => setFilter(item.id)}
+											>
+												{item.label}
+											</Button>
+										))}
+									</div>
+								</fieldset>
+								<p className="app-text-muted mt-3 text-xs tabular-nums" aria-live="polite">
+									{messages.expenses.resultCount({ count: filteredExpenses.length })}
+								</p>
+							</>
+						) : null}
 						{filteredExpenses.length === 0 && query.data.expenses.length > 0 ? (
 							<div className="py-8 text-center">
 								<p className="app-text-muted text-sm">{messages.expenses.filteredEmpty()}</p>

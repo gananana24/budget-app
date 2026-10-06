@@ -51,6 +51,28 @@ function renderExpenseFlow(
 }
 
 describe("expenses screen", () => {
+	it("hides category filters when the selected month has no expenses", async () => {
+		// Arrange
+		vi.useFakeTimers({ toFake: ["Date"] })
+		vi.setSystemTime(new Date("2026-10-05T00:00:00.000Z"))
+		const client = createApiClient({
+			fetch: vi.fn<typeof globalThis.fetch>(async () => Response.json(EMPTY_OVERVIEW)),
+			getToken: async () => "session-token",
+			networkErrorMessage: "通信エラー",
+			invalidResponseMessage: "応答エラー",
+		})
+		const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+		// Act
+		renderExpenseFlow(client, queryClient, "/expenses")
+		await screen.findByText("支出はまだありません")
+
+		// Assert
+		expect(screen.queryByRole("group", { name: "費目" })).not.toBeInTheDocument()
+		expect(screen.queryByRole("button", { name: "すべての費目" })).not.toBeInTheDocument()
+		expect(screen.getByRole("link", { name: "支出を追加" })).toBeInTheDocument()
+	})
+
 	it("keeps date, amount, category, and memo in keyboard order", async () => {
 		// Arrange
 		vi.useFakeTimers({ toFake: ["Date"] })
@@ -334,6 +356,7 @@ describe("expenses screen", () => {
 		expect(screen.getByText("その他")).toBeInTheDocument()
 		expect(screen.queryByText("昼食")).not.toBeInTheDocument()
 		expect(screen.getByRole("button", { name: "未分類" })).toHaveAttribute("aria-pressed", "true")
+		expect(screen.queryByText("費目で絞り込む")).not.toBeInTheDocument()
 	})
 
 	it("allows cancelling deletion and refreshes the list after confirmation", async () => {

@@ -63,7 +63,6 @@ export const messages = {
 		deleteTitle: generatedMessages.expensesDeleteTitle,
 		deleteDescription: generatedMessages.expensesDeleteDescription,
 		cancel: generatedMessages.expensesCancel,
-		filterLabel: generatedMessages.expensesFilterLabel,
 		filterAll: generatedMessages.expensesFilterAll,
 		filteredEmpty: generatedMessages.expensesFilteredEmpty,
 		resultCount: generatedMessages.expensesResultCount,
