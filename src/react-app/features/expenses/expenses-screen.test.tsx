@@ -290,4 +290,147 @@ describe("expenses screen", () => {
 		expect(router.state.location.search.month).toBe("2026-09")
 		expect(await screen.findByText("2026年9月")).toBeInTheDocument()
 	})
+
+	it("filters the monthly list by category and uncategorized expenses", async () => {
+		// Arrange
+		vi.useFakeTimers({ toFake: ["Date"] })
+		vi.setSystemTime(new Date("2026-10-05T00:00:00.000Z"))
+		const expenses = [
+			{
+				id: "expense-food",
+				date: "2026-10-05",
+				amount: 500,
+				categoryId: EMPTY_OVERVIEW.categories[0].id,
+				memo: "昼食",
+				createdAt: "2026-10-05",
+				updatedAt: "2026-10-05",
+			},
+			{
+				id: "expense-other",
+				date: "2026-10-04",
+				amount: 300,
+				categoryId: null,
+				memo: "その他",
+				createdAt: "2026-10-04",
+				updatedAt: "2026-10-04",
+			},
+		]
+		const overview = { ...EMPTY_OVERVIEW, expenses }
+		const client = createApiClient({
+			fetch: vi.fn<typeof globalThis.fetch>(async () => Response.json(overview)),
+			getToken: async () => "session-token",
+			networkErrorMessage: "通信エラー",
+			invalidResponseMessage: "応答エラー",
+		})
+		const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+		const user = userEvent.setup()
+		renderExpenseFlow(client, queryClient, "/expenses")
+		await screen.findByText("昼食")
+
+		// Act
+		await user.click(screen.getByRole("button", { name: "未分類" }))
+
+		// Assert
+		expect(screen.getByText("その他")).toBeInTheDocument()
+		expect(screen.queryByText("昼食")).not.toBeInTheDocument()
+		expect(screen.getByRole("button", { name: "未分類" })).toHaveAttribute("aria-pressed", "true")
+	})
+
+	it("allows cancelling deletion and refreshes the list after confirmation", async () => {
+		// Arrange
+		vi.useFakeTimers({ toFake: ["Date"] })
+		vi.setSystemTime(new Date("2026-10-05T00:00:00.000Z"))
+		const expense = {
+			id: "00000000-0000-4000-8000-000000000041",
+			date: "2026-10-05",
+			amount: 500,
+			categoryId: null,
+			memo: "昼食",
+			createdAt: "2026-10-05",
+			updatedAt: "2026-10-05",
+		}
+		let deleted = false
+		const fetch = vi.fn<typeof globalThis.fetch>(async (_input, init) => {
+			if (init?.method === "DELETE") {
+				deleted = true
+				return new Response(null, { status: 204 })
+			}
+			return Response.json({ ...EMPTY_OVERVIEW, expenses: deleted ? [] : [expense] })
+		})
+		const client = createApiClient({
+			fetch,
+			getToken: async () => "session-token",
+			networkErrorMessage: "通信エラー",
+			invalidResponseMessage: "応答エラー",
+		})
+		const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+		const user = userEvent.setup()
+		renderExpenseFlow(client, queryClient, "/expenses")
+		await screen.findByText("昼食")
+
+		// Act
+		await user.click(screen.getByRole("link", { name: /昼食.*編集/ }))
+		await screen.findByRole("heading", { name: "支出を編集" })
+		await user.click(screen.getByRole("button", { name: "削除" }))
+		expect(screen.getByText(/昼食.*2026年10月5日.*￥500/)).toBeInTheDocument()
+		await user.click(screen.getByRole("button", { name: "キャンセル" }))
+		expect(deleted).toBe(false)
+		await user.click(screen.getByRole("button", { name: "削除" }))
+		await user.click(screen.getByRole("button", { name: "削除" }))
+
+		// Assert
+		await waitFor(() => expect(screen.queryByText("昼食")).not.toBeInTheDocument())
+		expect(fetch.mock.calls.filter(([, init]) => init?.method === "DELETE")).toHaveLength(1)
+	})
+
+	it("preserves an unavailable category when editing an expense from a past month", async () => {
+		// Arrange
+		vi.useFakeTimers({ toFake: ["Date"] })
+		vi.setSystemTime(new Date("2026-10-05T00:00:00.000Z"))
+		const expense = {
+			id: "00000000-0000-4000-8000-000000000042",
+			date: "2026-09-20",
+			amount: 500,
+			categoryId: "00000000-0000-4000-8000-000000000099",
+			memo: "旧費目",
+			createdAt: "2026-09-20",
+			updatedAt: "2026-09-20",
+		}
+		const overview = { ...EMPTY_OVERVIEW, month: "2026-09-01", expenses: [expense] }
+		const fetch = vi.fn<typeof globalThis.fetch>(async (_input, init) => {
+			if (init?.method === "PATCH") return Response.json({ ...expense, memo: "修正" })
+			return Response.json(overview)
+		})
+		const client = createApiClient({
+			fetch,
+			getToken: async () => "session-token",
+			networkErrorMessage: "通信エラー",
+			invalidResponseMessage: "応答エラー",
+		})
+		const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+		const user = userEvent.setup()
+		const router = renderExpenseFlow(client, queryClient, "/expenses?month=2026-09")
+		await screen.findByText("旧費目")
+
+		// Act
+		await user.click(screen.getByRole("link", { name: /旧費目.*編集/ }))
+		await screen.findByRole("heading", { name: "支出を編集" })
+		expect(screen.getByRole("combobox", { name: "費目" })).toHaveTextContent(
+			"現在は表示されない費目",
+		)
+		await user.clear(screen.getByLabelText("メモ（任意）"))
+		await user.type(screen.getByLabelText("メモ（任意）"), "修正")
+		await user.click(screen.getByRole("button", { name: "変更を保存" }))
+
+		// Assert
+		await waitFor(() => expect(router.state.location.pathname).toBe("/expenses"))
+		expect(router.state.location.search.month).toBe("2026-09")
+		const patchCall = fetch.mock.calls.find(([, init]) => init?.method === "PATCH")
+		expect(JSON.parse(String(patchCall?.[1]?.body))).toEqual({
+			date: "2026-09-20",
+			amount: 500,
+			categoryId: expense.categoryId,
+			memo: "修正",
+		})
+	})
 })

@@ -2,6 +2,7 @@ import type { Context } from "hono"
 import { UnauthorizedError } from "../../domain/authentication/exceptions/unauthorized-error"
 import { BootstrapRequiredError } from "../../domain/authorization/exceptions/bootstrap-required-error"
 import { ExpenseCategoryNotFoundError } from "../../domain/expense/exceptions/expense-category-not-found-error"
+import { ExpenseNotFoundError } from "../../domain/expense/exceptions/expense-not-found-error"
 import { InvalidValueError } from "../../domain/shared/exceptions/invalid-value-error"
 import { type ErrorCode, errorMessages } from "./error-messages"
 
@@ -36,7 +37,7 @@ export function domainErrorResponse(error: unknown, context: Context): Response 
 		)
 	}
 
-	if (error instanceof ExpenseCategoryNotFoundError) {
+	if (error instanceof ExpenseCategoryNotFoundError || error instanceof ExpenseNotFoundError) {
 		return context.json(errorBody("NOT_FOUND"), 404)
 	}
 

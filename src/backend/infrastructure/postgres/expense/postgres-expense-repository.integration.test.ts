@@ -1,10 +1,13 @@
 import { Client } from "pg"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { ExpenseCategoryNotFoundError } from "../../../domain/expense/exceptions/expense-category-not-found-error"
+import { ExpenseNotFoundError } from "../../../domain/expense/exceptions/expense-not-found-error"
 import { ExpenseId } from "../../../domain/expense/value-objects/expense-id"
 import { ClerkUserId } from "../../../domain/user/value-objects/clerk-user-id"
 import { DefaultBootstrapUseCase } from "../../../usecase/bootstrap/bootstrap-use-case"
 import { DefaultCreateExpenseUseCase } from "../../../usecase/expense/create-expense-use-case"
+import { DefaultDeleteExpenseUseCase } from "../../../usecase/expense/delete-expense-use-case"
+import { DefaultUpdateExpenseUseCase } from "../../../usecase/expense/update-expense-use-case"
 import { PostgresBudgetPeriodRepository } from "../budget/postgres-budget-period-repository"
 import { withPostgresTransaction } from "../database"
 import { PostgresHouseholdMembershipRepository } from "../household/postgres-household-membership-repository"
@@ -133,5 +136,103 @@ describe("expense creation with PostgreSQL", () => {
 
 		// Assert
 		await expect(result).rejects.toBeInstanceOf(ExpenseCategoryNotFoundError)
+	})
+
+	it("updates an owned expense across months and physically deletes it", async () => {
+		// Arrange
+		const authorization = await bootstrap("clerk_expense_editor")
+		const expense = await createExpense(authorization, null)
+		const update = (input: Parameters<DefaultUpdateExpenseUseCase["execute"]>[0]) =>
+			withPostgresTransaction(TEST_DATABASE_URL, (client) =>
+				new DefaultUpdateExpenseUseCase(
+					new PostgresExpenseRepository(client),
+					() => new Date("2026-10-05T00:00:00.000Z"),
+				).execute(input),
+			)
+		const remove = () =>
+			withPostgresTransaction(TEST_DATABASE_URL, (client) =>
+				new DefaultDeleteExpenseUseCase(new PostgresExpenseRepository(client)).execute({
+					authorization,
+					expenseId: expense.id,
+				}),
+			)
+
+		// Act
+		const updated = await update({
+			authorization,
+			expenseId: expense.id,
+			date: "2026-09-30",
+			amount: 700,
+			categoryId: null,
+			memo: "  修正  ",
+		})
+		const afterUpdate = await inspectionClient.query(
+			"SELECT expense_date::text AS date, amount, memo FROM public.expenses WHERE id = $1",
+			[expense.id],
+		)
+		await remove()
+		const afterDelete = await inspectionClient.query(
+			"SELECT id FROM public.expenses WHERE id = $1",
+			[expense.id],
+		)
+
+		// Assert
+		expect(updated).toEqual({
+			id: expense.id,
+			date: "2026-09-30",
+			amount: 700,
+			categoryId: null,
+			memo: "修正",
+		})
+		expect(afterUpdate.rows).toEqual([{ date: "2026-09-30", amount: 700, memo: "修正" }])
+		expect(afterDelete.rows).toEqual([])
+	})
+
+	it("returns the same not-found result for another household's and missing expense IDs", async () => {
+		// Arrange
+		const owner = await bootstrap("clerk_expense_owner_for_changes")
+		const other = await bootstrap("clerk_expense_other_for_changes")
+		const expense = await createExpense(other, null)
+		const missingId = "00000000-0000-4000-8000-000000000099"
+		const update = (expenseId: string) =>
+			withPostgresTransaction(TEST_DATABASE_URL, (client) =>
+				new DefaultUpdateExpenseUseCase(
+					new PostgresExpenseRepository(client),
+					() => new Date("2026-10-05T00:00:00.000Z"),
+				).execute({
+					authorization: owner,
+					expenseId,
+					date: "2026-10-05",
+					amount: 1,
+					categoryId: null,
+					memo: null,
+				}),
+			)
+		const remove = (expenseId: string) =>
+			withPostgresTransaction(TEST_DATABASE_URL, (client) =>
+				new DefaultDeleteExpenseUseCase(new PostgresExpenseRepository(client)).execute({
+					authorization: owner,
+					expenseId,
+				}),
+			)
+
+		// Act
+		const results = await Promise.allSettled([
+			update(expense.id),
+			update(missingId),
+			remove(expense.id),
+			remove(missingId),
+		])
+		const stored = await inspectionClient.query(
+			"SELECT amount FROM public.expenses WHERE id = $1",
+			[expense.id],
+		)
+
+		// Assert
+		for (const result of results) {
+			expect(result.status).toBe("rejected")
+			if (result.status === "rejected") expect(result.reason).toBeInstanceOf(ExpenseNotFoundError)
+		}
+		expect(stored.rows).toEqual([{ amount: 1_200 }])
 	})
 })

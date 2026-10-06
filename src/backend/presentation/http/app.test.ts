@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { UnauthorizedError } from "../../domain/authentication/exceptions/unauthorized-error"
 import { BootstrapRequiredError } from "../../domain/authorization/exceptions/bootstrap-required-error"
+import { ExpenseNotFoundError } from "../../domain/expense/exceptions/expense-not-found-error"
 import { AuthorizationContext } from "../../domain/household/value-objects/authorization-context"
 import { HouseholdId } from "../../domain/household/value-objects/household-id"
 import { InvalidValueError } from "../../domain/shared/exceptions/invalid-value-error"
@@ -34,6 +35,16 @@ function unusedMonthlyDependencies() {
 		createExpenseUseCase: {
 			execute: async () => {
 				throw new Error("Expense creation is not expected in this test")
+			},
+		},
+		updateExpenseUseCase: {
+			execute: async () => {
+				throw new Error("Expense update is not expected in this test")
+			},
+		},
+		deleteExpenseUseCase: {
+			execute: async () => {
+				throw new Error("Expense deletion is not expected in this test")
 			},
 		},
 	}
@@ -310,6 +321,8 @@ describe("HTTP app", () => {
 					throw new Error("Expense creation is not expected in this test")
 				},
 			},
+			updateExpenseUseCase: unusedMonthlyDependencies().updateExpenseUseCase,
+			deleteExpenseUseCase: unusedMonthlyDependencies().deleteExpenseUseCase,
 		})
 
 		// Act
@@ -397,5 +410,46 @@ describe("HTTP app", () => {
 				fields: { reason: "INVALID_FORMAT" },
 			},
 		})
+	})
+
+	it("maps missing or inaccessible expense changes to the same 404 response", async () => {
+		// Arrange
+		const authorization = createAuthorizationContext()
+		const app = createHttpApp({
+			...unusedMonthlyDependencies(),
+			authenticationMiddleware: [createAuthenticatedUserMiddleware(() => "clerk_user_verified")],
+			bootstrapUseCase: {
+				execute: async () => {
+					throw new Error("Unused")
+				},
+			},
+			resolveAuthorizationUseCase: { execute: async () => authorization },
+			updateExpenseUseCase: {
+				execute: async () => {
+					throw new ExpenseNotFoundError()
+				},
+			},
+			deleteExpenseUseCase: {
+				execute: async () => {
+					throw new ExpenseNotFoundError()
+				},
+			},
+		})
+		const id = "00000000-0000-4000-8000-000000000099"
+
+		// Act
+		const [updateResponse, deleteResponse] = await Promise.all([
+			app.request(`/api/expenses/${id}`, {
+				method: "PATCH",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({ date: "2026-10-05", amount: 100, categoryId: null, memo: null }),
+			}),
+			app.request(`/api/expenses/${id}`, { method: "DELETE" }),
+		])
+
+		// Assert
+		expect(updateResponse.status).toBe(404)
+		expect(deleteResponse.status).toBe(404)
+		expect(await updateResponse.json()).toEqual(await deleteResponse.json())
 	})
 })
