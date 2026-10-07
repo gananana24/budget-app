@@ -80,7 +80,7 @@ export function ExpensesScreen() {
 							{messages.home.addExpense()}
 						</Link>
 					</div>
-					<div className="mt-5 flex items-center justify-between gap-2 rounded-2xl bg-[var(--budget-primary-soft)] px-1">
+					<div className="mt-5 flex items-center justify-between gap-2">
 						<Button
 							type="button"
 							variant="ghost"
