@@ -23,6 +23,12 @@ function createUseCase(savedExpenses: Expense[]) {
 		save: async (expense) => {
 			savedExpenses.push(expense)
 		},
+		update: async () => {
+			throw new Error("Update is not expected")
+		},
+		delete: async () => {
+			throw new Error("Delete is not expected")
+		},
 	}
 
 	return new DefaultCreateExpenseUseCase({

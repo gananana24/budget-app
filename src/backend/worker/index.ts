@@ -14,6 +14,8 @@ export default {
 			bootstrapUseCase: dependencies.bootstrapUseCase,
 			resolveAuthorizationUseCase: dependencies.resolveAuthorizationUseCase,
 			createExpenseUseCase: dependencies.createExpenseUseCase,
+			updateExpenseUseCase: dependencies.updateExpenseUseCase,
+			deleteExpenseUseCase: dependencies.deleteExpenseUseCase,
 			getMonthlyOverviewUseCase: dependencies.getMonthlyOverviewUseCase,
 		})
 

@@ -107,7 +107,7 @@ export function createApiClient({
 }: ApiClientOptions) {
 	async function fetchApi<T>(
 		path: string,
-		method: "GET" | "POST",
+		method: "GET" | "POST" | "PATCH" | "DELETE",
 		body: unknown,
 		options: RequestOptions,
 	): Promise<T> {
@@ -148,6 +148,12 @@ export function createApiClient({
 		},
 		post<T>(path: string, body?: unknown, options: RequestOptions = {}): Promise<T> {
 			return fetchApi<T>(path, "POST", body, options)
+		},
+		patch<T>(path: string, body: unknown, options: RequestOptions = {}): Promise<T> {
+			return fetchApi<T>(path, "PATCH", body, options)
+		},
+		delete(path: string, options: RequestOptions = {}): Promise<void> {
+			return fetchApi<void>(path, "DELETE", undefined, options)
 		},
 	}
 }
