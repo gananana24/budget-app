@@ -3,6 +3,7 @@ import { ChevronRight } from "lucide-react"
 import { formatShortDate, formatYen } from "../../../i18n/format"
 import { messages } from "../../../i18n/messages"
 import type { MonthlyExpense, MonthlyOverview } from "../api/monthly-overview"
+import { CategoryIcon } from "./category-icon"
 
 type ExpenseListProps = Readonly<{
 	overview: MonthlyOverview
@@ -33,7 +34,7 @@ export function ExpenseList({
 	}
 
 	return (
-		<ul className="mt-4 divide-y app-divider" aria-label={label}>
+		<ul className="mt-4 space-y-1 rounded-2xl bg-white p-2" aria-label={label}>
 			{expenses.map((expense) => {
 				const categoryName = expense.categoryId
 					? (categoryNames.get(expense.categoryId) ?? messages.expenses.hiddenCategory())
@@ -45,7 +46,7 @@ export function ExpenseList({
 								to="/expenses/$expenseId/edit"
 								params={{ expenseId: expense.id }}
 								search={{ month: editMonth }}
-								className="-mx-2 flex min-h-18 items-center justify-between gap-3 rounded-lg px-2 py-3 transition-colors hover:bg-muted/60 focus-visible:outline-2 focus-visible:outline-[var(--budget-primary)]"
+								className="flex min-h-18 items-center justify-between gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-[var(--budget-primary-soft)] focus-visible:outline-2 focus-visible:outline-[var(--budget-primary)]"
 							>
 								<ExpenseRowContent expense={expense} categoryName={categoryName} />
 								<ChevronRight
@@ -55,7 +56,7 @@ export function ExpenseList({
 								<span className="sr-only">{messages.expenses.edit()}</span>
 							</Link>
 						) : (
-							<div className="flex min-h-17 items-center justify-between gap-4 py-3">
+							<div className="flex min-h-17 items-center justify-between gap-3 px-3 py-3">
 								<ExpenseRowContent expense={expense} categoryName={categoryName} />
 							</div>
 						)}
@@ -72,17 +73,18 @@ function ExpenseRowContent({
 }: Readonly<{ expense: MonthlyExpense; categoryName: string }>) {
 	return (
 		<>
+			<CategoryIcon name={categoryName} />
 			<div className="min-w-0 flex-1">
-				<p className="app-text-ink truncate text-[0.9375rem] font-semibold">
+				<p className="app-text-ink line-clamp-2 text-[0.9375rem] font-semibold">
 					{expense.memo || categoryName}
 				</p>
-				<p className="app-text-muted mt-1 text-xs">
+				<p className="app-text-muted mt-1 text-sm">
 					{formatShortDate(expense.date)}
 					{expense.memo ? ` · ${categoryName}` : ""}
 				</p>
 			</div>
-			<div className="shrink-0 text-right">
-				<p className="app-text-ink text-[0.9375rem] font-semibold tabular-nums">
+			<div className="min-w-0 max-w-[40%] text-right">
+				<p className="app-text-ink break-all text-[0.9375rem] font-semibold tabular-nums">
 					{formatYen(expense.amount)}
 				</p>
 			</div>

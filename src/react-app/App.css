@@ -2,9 +2,9 @@
 	--budget-ink: #2b312d;
 	--budget-muted: #68706b;
 	--budget-line: #e5e9e5;
-	--budget-primary: #496352;
-	--budget-primary-soft: #dbe8d8;
-	--budget-primary-hover: #cfdfcc;
+	--budget-primary: #27814e;
+	--budget-primary-soft: #e5f3e9;
+	--budget-primary-hover: #d5e9dc;
 }
 
 .app-text-ink {
@@ -29,6 +29,23 @@
 .app-action-link:hover {
 	color: var(--budget-primary);
 	background-color: var(--budget-primary-hover);
+}
+
+.app-primary-action {
+	color: #fff;
+	background-color: var(--budget-primary);
+}
+
+.app-primary-action:hover {
+	color: #fff;
+	background-color: #216e43;
+}
+
+.app-category-filter-active,
+.app-category-filter-active:hover {
+	color: #fff;
+	background-color: var(--budget-primary);
+	border-color: var(--budget-primary);
 }
 
 .app-button:focus-visible,
