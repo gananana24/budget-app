@@ -68,8 +68,7 @@ describe("expenses screen", () => {
 		await screen.findByText("支出はまだありません")
 
 		// Assert
-		expect(screen.queryByRole("group", { name: "費目" })).not.toBeInTheDocument()
-		expect(screen.queryByRole("button", { name: "すべて" })).not.toBeInTheDocument()
+		expect(screen.queryByRole("group", { name: "カテゴリー" })).not.toBeInTheDocument()
 		expect(screen.getByRole("link", { name: "支出を追加" })).toBeInTheDocument()
 	})
 
@@ -147,7 +146,7 @@ describe("expenses screen", () => {
 		const user = userEvent.setup()
 		const router = renderExpenseFlow(client, queryClient)
 		await screen.findByRole("heading", { name: "支出を追加" })
-		const categoryTrigger = await screen.findByRole("combobox", { name: "費目" })
+		const categoryTrigger = await screen.findByRole("combobox", { name: "カテゴリー" })
 		expect(categoryTrigger).toHaveTextContent("未分類")
 
 		// Act
@@ -163,7 +162,13 @@ describe("expenses screen", () => {
 		// Assert
 		await waitFor(() => expect(router.state.location.pathname).toBe("/expenses"))
 		expect(screen.getByText("2026年10月")).toBeInTheDocument()
-		expect(await screen.findByText("￥1,200")).toBeInTheDocument()
+		expect(await screen.findAllByText("￥1,200")).toHaveLength(3)
+		expect(
+			screen
+				.getByRole("list", { name: "2026年10月の支出" })
+				.compareDocumentPosition(screen.getByRole("heading", { name: "カテゴリーごとの支出" })) &
+				Node.DOCUMENT_POSITION_FOLLOWING,
+		).toBeTruthy()
 		const postCall = fetch.mock.calls.find(([, init]) => init?.method === "POST")
 		expect(postCall).toBeDefined()
 		expect(JSON.parse(String(postCall?.[1]?.body))).toEqual({
@@ -213,7 +218,7 @@ describe("expenses screen", () => {
 		expect(await screen.findByText("2026年9月")).toBeInTheDocument()
 		expect(await screen.findByText("先月の支出")).toBeInTheDocument()
 		expect(screen.getByRole("button", { name: "次の月" })).toBeEnabled()
-		expect(screen.getByRole("link", { name: "追加" })).toHaveAttribute(
+		expect(screen.getByRole("link", { name: "支出を追加" })).toHaveAttribute(
 			"href",
 			"/expenses/new?month=2026-09",
 		)
@@ -368,9 +373,8 @@ describe("expenses screen", () => {
 		// Assert
 		expect(screen.getByText("その他")).toBeInTheDocument()
 		expect(screen.queryByText("昼食")).not.toBeInTheDocument()
-		expect(screen.queryByRole("button", { name: "日用品" })).not.toBeInTheDocument()
 		expect(screen.getByRole("button", { name: "未分類" })).toHaveAttribute("aria-pressed", "true")
-		expect(screen.queryByText("費目で絞り込む")).not.toBeInTheDocument()
+		expect(screen.queryByRole("button", { name: "日用品" })).not.toBeInTheDocument()
 	})
 
 	it("groups expenses from unavailable categories into one filter", async () => {
@@ -411,10 +415,13 @@ describe("expenses screen", () => {
 		await screen.findByText("旧費目の支出1")
 
 		// Act
-		await user.click(screen.getByRole("button", { name: "現在は表示されない費目" }))
+		await user.click(screen.getByRole("button", { name: "削除済みのカテゴリー" }))
 
 		// Assert
-		expect(screen.getAllByRole("button", { name: "現在は表示されない費目" })).toHaveLength(1)
+		expect(screen.getByRole("button", { name: "削除済みのカテゴリー" })).toHaveAttribute(
+			"aria-pressed",
+			"true",
+		)
 		expect(screen.getByText("旧費目の支出1")).toBeInTheDocument()
 		expect(screen.getByText("旧費目の支出2")).toBeInTheDocument()
 		expect(screen.getByText("2件")).toBeInTheDocument()
@@ -499,8 +506,8 @@ describe("expenses screen", () => {
 		// Act
 		await user.click(screen.getByRole("link", { name: /旧費目.*編集/ }))
 		await screen.findByRole("heading", { name: "支出を編集" })
-		expect(screen.getByRole("combobox", { name: "費目" })).toHaveTextContent(
-			"現在は表示されない費目",
+		expect(screen.getByRole("combobox", { name: "カテゴリー" })).toHaveTextContent(
+			"削除済みのカテゴリー",
 		)
 		await user.clear(screen.getByLabelText("メモ（任意）"))
 		await user.type(screen.getByLabelText("メモ（任意）"), "修正")

@@ -20,10 +20,10 @@ const CURRENT_OVERVIEW: MonthlyOverview = {
 			id: "food",
 			name: "食費",
 			budget: { status: "set", amount: 10_000 },
-			expenses: 11_000,
-			remaining: -1_000,
+			expenses: 10_500,
+			remaining: -500,
 		},
-		{ id: "daily", name: "日用品", budget: { status: "unset" }, expenses: 0, remaining: null },
+		{ id: "daily", name: "日用品", budget: { status: "unset" }, expenses: 500, remaining: null },
 		{
 			id: "transport",
 			name: "交通費",
@@ -60,7 +60,7 @@ function renderHome(fetch: typeof globalThis.fetch, initialPath = "/") {
 afterEach(() => vi.useRealTimers())
 
 describe("monthly home", () => {
-	it("distinguishes an exceeded budget from an unset category budget", async () => {
+	it("shows a compact current-month breakdown with distinct over-budget and unset states", async () => {
 		// Arrange
 		vi.useFakeTimers({ toFake: ["Date"] })
 		vi.setSystemTime(new Date("2026-10-05T00:00:00.000Z"))
@@ -68,18 +68,45 @@ describe("monthly home", () => {
 
 		// Act
 		renderHome(fetch)
-		await screen.findByRole("heading", { name: "費目別の状況" })
+		await screen.findByRole("heading", { name: "カテゴリーごとの支出" })
 
 		// Assert
-		expect(screen.getByText("予算超過", { selector: "p" })).toBeInTheDocument()
-		expect(screen.getAllByText("予算未設定")).toHaveLength(1)
-		expect(screen.getByText("予算 ￥10,000")).toBeInTheDocument()
-		expect(screen.getByText("予算 ￥0")).toBeInTheDocument()
-		expect(screen.getByText("未分類の支出 ￥1,000")).toBeInTheDocument()
-		expect(screen.getByRole("button", { name: "次の月" })).toBeDisabled()
+		expect(screen.getByRole("heading", { name: "今月の家計" })).toBeInTheDocument()
+		expect(screen.getByText("2026年10月")).toBeInTheDocument()
+		expect(screen.getAllByText("予算超過")).toHaveLength(2)
+		expect(screen.getByText("予算未設定")).toBeInTheDocument()
+		expect(screen.getByText("未分類")).toBeInTheDocument()
+		expect(screen.queryByText("交通費")).not.toBeInTheDocument()
+		expect(screen.queryByRole("button", { name: "前の月" })).not.toBeInTheDocument()
+		expect(
+			screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent),
+		).toEqual(["最近の支出", "カテゴリーごとの支出"])
+		expect(screen.getByRole("link", { name: "すべてのカテゴリーを見る" })).toHaveAttribute(
+			"href",
+			"/expenses?month=2026-10#categories",
+		)
 	})
 
-	it("opens an uninitialized past month without sending a write request", async () => {
+	it("shows every category, including zero budgets, in the monthly details", async () => {
+		// Arrange
+		vi.useFakeTimers({ toFake: ["Date"] })
+		vi.setSystemTime(new Date("2026-10-05T00:00:00.000Z"))
+		const fetch = vi.fn<typeof globalThis.fetch>(async () => Response.json(CURRENT_OVERVIEW))
+		const user = userEvent.setup()
+		const router = renderHome(fetch)
+		await screen.findByRole("link", { name: "すべてのカテゴリーを見る" })
+
+		// Act
+		await user.click(screen.getByRole("link", { name: "すべてのカテゴリーを見る" }))
+		await screen.findByText("交通費")
+
+		// Assert
+		expect(router.state.location.pathname).toBe("/expenses")
+		expect(screen.getByText("予算 ￥0")).toBeInTheDocument()
+		expect(screen.getByRole("button", { name: "前の月" })).toBeInTheDocument()
+	})
+
+	it("reads an uninitialized past month from monthly details without a write request", async () => {
 		// Arrange
 		vi.useFakeTimers({ toFake: ["Date"] })
 		vi.setSystemTime(new Date("2026-10-05T00:00:00.000Z"))
@@ -100,42 +127,19 @@ describe("monthly home", () => {
 			Response.json(String(input).includes("2026-09-01") ? pastOverview : CURRENT_OVERVIEW),
 		)
 		const user = userEvent.setup()
-		const router = renderHome(fetch)
-		await screen.findByRole("heading", { name: "2026年10月" })
+		const router = renderHome(fetch, "/expenses")
+		await screen.findByText("2026年10月")
 
 		// Act
 		await user.click(screen.getByRole("button", { name: "前の月" }))
-		await screen.findByRole("heading", { name: "2026年9月" })
+		await screen.findByText("2026年9月")
 
 		// Assert
 		expect(router.state.location.search.month).toBe("2026-09")
-		expect(screen.getAllByText("予算未設定")).toHaveLength(5)
-		expect(screen.getByRole("link", { name: "支出をすべて見る" })).toHaveAttribute(
-			"href",
-			"/expenses?month=2026-09",
-		)
-		expect(screen.getByRole("link", { name: "支出を追加" })).toHaveAttribute(
-			"href",
-			"/expenses/new?month=2026-09",
-		)
+		expect(screen.getByText("￥0")).toBeInTheDocument()
 		expect(fetch.mock.calls.map(([input]) => String(input))).toContain("/api/months/2026-09-01")
 		expect(
 			fetch.mock.calls.every(([, init]) => init?.method === undefined || init.method === "GET"),
 		).toBe(true)
-	})
-
-	it("opens an arbitrary past month from its URL", async () => {
-		// Arrange
-		vi.useFakeTimers({ toFake: ["Date"] })
-		vi.setSystemTime(new Date("2026-10-05T00:00:00.000Z"))
-		const fetch = vi.fn<typeof globalThis.fetch>(async () => Response.json(CURRENT_OVERVIEW))
-
-		// Act
-		const router = renderHome(fetch, "/?month=2024-02")
-		await screen.findByRole("heading", { name: "2024年2月" })
-
-		// Assert
-		expect(router.state.location.search.month).toBe("2024-02")
-		expect(fetch.mock.calls.map(([input]) => String(input))).toContain("/api/months/2024-02-01")
 	})
 })
