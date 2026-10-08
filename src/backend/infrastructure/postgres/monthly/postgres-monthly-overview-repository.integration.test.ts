@@ -126,12 +126,14 @@ describe("monthly overview with PostgreSQL", () => {
 		expect(result.categories).toHaveLength(10)
 		expect(result.categories[0]).toMatchObject({
 			name: "食費",
+			iconName: "utensils",
 			budget: { status: "set", amount: 1_000 },
 			expenses: 900,
 			remaining: 100,
 		})
 		expect(result.categories.at(-1)).toMatchObject({
 			name: "予備費",
+			iconName: "tag",
 			budget: { status: "set", amount: 0 },
 			expenses: 0,
 			remaining: 0,

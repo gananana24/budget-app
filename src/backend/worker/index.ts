@@ -17,6 +17,10 @@ export default {
 			updateExpenseUseCase: dependencies.updateExpenseUseCase,
 			deleteExpenseUseCase: dependencies.deleteExpenseUseCase,
 			getMonthlyOverviewUseCase: dependencies.getMonthlyOverviewUseCase,
+			listCategoriesUseCase: dependencies.listCategoriesUseCase,
+			createCategoryUseCase: dependencies.createCategoryUseCase,
+			updateCategoryUseCase: dependencies.updateCategoryUseCase,
+			deleteCategoryUseCase: dependencies.deleteCategoryUseCase,
 		})
 
 		return await app.fetch(request, env, executionContext)

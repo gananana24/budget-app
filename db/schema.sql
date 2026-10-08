@@ -125,7 +125,9 @@ CREATE TABLE public.categories (
     seed_key text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    icon_name text DEFAULT 'tag'::text NOT NULL,
     CONSTRAINT categories_check CHECK ((((household_id IS NULL) AND (seed_key IS NOT NULL)) OR ((household_id IS NOT NULL) AND (seed_key IS NULL)))),
+    CONSTRAINT categories_icon_name_check CHECK ((((char_length(icon_name) >= 1) AND (char_length(icon_name) <= 64)) AND (icon_name ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text))),
     CONSTRAINT categories_name_check CHECK ((((char_length(name) >= 1) AND (char_length(name) <= 50)) AND (name !~ '^[[:space:]]'::text) AND (name !~ '[[:space:]]$'::text))),
     CONSTRAINT categories_seed_key_check CHECK ((seed_key = ANY (ARRAY['food'::text, 'daily_goods'::text, 'housing'::text, 'utilities'::text, 'communications'::text, 'transportation'::text, 'medical'::text, 'entertainment'::text, 'other'::text])))
 );
@@ -434,4 +436,5 @@ ALTER TABLE ONLY public.monthly_budgets
 --
 
 INSERT INTO public.schema_migrations (version) VALUES
-    ('20260923015606');
+    ('20260923015606'),
+    ('20261008103500');

@@ -1,6 +1,8 @@
 import type { Context } from "hono"
 import { UnauthorizedError } from "../../domain/authentication/exceptions/unauthorized-error"
 import { BootstrapRequiredError } from "../../domain/authorization/exceptions/bootstrap-required-error"
+import { CategoryNameConflictError } from "../../domain/category/exceptions/category-name-conflict-error"
+import { CategoryNotFoundError } from "../../domain/category/exceptions/category-not-found-error"
 import { ExpenseCategoryNotFoundError } from "../../domain/expense/exceptions/expense-category-not-found-error"
 import { ExpenseNotFoundError } from "../../domain/expense/exceptions/expense-not-found-error"
 import { InvalidValueError } from "../../domain/shared/exceptions/invalid-value-error"
@@ -37,7 +39,15 @@ export function domainErrorResponse(error: unknown, context: Context): Response 
 		)
 	}
 
-	if (error instanceof ExpenseCategoryNotFoundError || error instanceof ExpenseNotFoundError) {
+	if (error instanceof CategoryNameConflictError) {
+		return context.json(errorBody("CATEGORY_NAME_CONFLICT"), 409)
+	}
+
+	if (
+		error instanceof CategoryNotFoundError ||
+		error instanceof ExpenseCategoryNotFoundError ||
+		error instanceof ExpenseNotFoundError
+	) {
 		return context.json(errorBody("NOT_FOUND"), 404)
 	}
 

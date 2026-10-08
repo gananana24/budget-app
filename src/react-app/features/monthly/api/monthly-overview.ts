@@ -4,6 +4,7 @@ import type { ApiClient } from "@/lib/api-client"
 export type MonthlyCategory = Readonly<{
 	id: string
 	name: string
+	iconName: string
 	budget: Readonly<{ status: "unset" }> | Readonly<{ status: "set"; amount: number }>
 	expenses: number
 	remaining: number | null

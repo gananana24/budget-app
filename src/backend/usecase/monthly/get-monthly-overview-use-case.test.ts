@@ -22,9 +22,9 @@ function createRepository(): MonthlyOverviewRepository {
 			totalExpenseAmount: 1_300,
 			uncategorizedExpenseAmount: 500,
 			categories: [
-				{ id: "food", name: "食費", budgetAmount: 1_000, expenseAmount: 800 },
-				{ id: "other", name: "その他", budgetAmount: null, expenseAmount: 0 },
-				{ id: "zero", name: "予備費", budgetAmount: 0, expenseAmount: 0 },
+				{ id: "food", name: "食費", iconName: "utensils", budgetAmount: 1_000, expenseAmount: 800 },
+				{ id: "other", name: "その他", iconName: "ellipsis", budgetAmount: null, expenseAmount: 0 },
+				{ id: "zero", name: "予備費", iconName: "tag", budgetAmount: 0, expenseAmount: 0 },
 			],
 			expenses: [],
 		}),
@@ -55,6 +55,7 @@ describe("get monthly overview", () => {
 				{
 					id: "food",
 					name: "食費",
+					iconName: "utensils",
 					budget: { status: "set", amount: 1_000 },
 					expenses: 800,
 					remaining: 200,
@@ -62,6 +63,7 @@ describe("get monthly overview", () => {
 				{
 					id: "other",
 					name: "その他",
+					iconName: "ellipsis",
 					budget: { status: "unset" },
 					expenses: 0,
 					remaining: null,
@@ -69,6 +71,7 @@ describe("get monthly overview", () => {
 				{
 					id: "zero",
 					name: "予備費",
+					iconName: "tag",
 					budget: { status: "set", amount: 0 },
 					expenses: 0,
 					remaining: 0,
