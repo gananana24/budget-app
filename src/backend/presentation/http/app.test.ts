@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { UnauthorizedError } from "../../domain/authentication/exceptions/unauthorized-error"
 import { BootstrapRequiredError } from "../../domain/authorization/exceptions/bootstrap-required-error"
+import { CategoryNameConflictError } from "../../domain/category/exceptions/category-name-conflict-error"
+import { CategoryNotFoundError } from "../../domain/category/exceptions/category-not-found-error"
 import { ExpenseNotFoundError } from "../../domain/expense/exceptions/expense-not-found-error"
 import { AuthorizationContext } from "../../domain/household/value-objects/authorization-context"
 import { HouseholdId } from "../../domain/household/value-objects/household-id"
@@ -22,6 +24,26 @@ function createAuthorizationContext(): AuthorizationContext {
 
 function unusedMonthlyDependencies() {
 	return {
+		listCategoriesUseCase: {
+			execute: async () => {
+				throw new Error("Category listing is not expected in this test")
+			},
+		},
+		createCategoryUseCase: {
+			execute: async () => {
+				throw new Error("Category creation is not expected in this test")
+			},
+		},
+		updateCategoryUseCase: {
+			execute: async () => {
+				throw new Error("Category rename is not expected in this test")
+			},
+		},
+		deleteCategoryUseCase: {
+			execute: async () => {
+				throw new Error("Category deletion is not expected in this test")
+			},
+		},
 		resolveAuthorizationUseCase: {
 			execute: async () => {
 				throw new Error("Authorization is not expected in this test")
@@ -82,6 +104,91 @@ describe("HTTP app", () => {
 			},
 		})
 	}
+
+	it("exposes category creation and maps duplicate names to a safe conflict response", async () => {
+		// Arrange
+		const authorization = createAuthorizationContext()
+		const app = createHttpApp({
+			...unusedMonthlyDependencies(),
+			authenticationMiddleware: [createAuthenticatedUserMiddleware(() => "clerk_user_verified")],
+			bootstrapUseCase: {
+				execute: async () => {
+					throw new Error("Unexpected bootstrap")
+				},
+			},
+			resolveAuthorizationUseCase: { execute: async () => authorization },
+			createCategoryUseCase: {
+				execute: async ({ name, iconName }) => {
+					if (name === "食費") throw new CategoryNameConflictError()
+					return {
+						id: "00000000-0000-4000-8000-000000000099",
+						name: String(name),
+						iconName: String(iconName),
+						isInitial: false,
+					}
+				},
+			},
+		})
+
+		// Act
+		const created = await app.request("/api/categories", {
+			method: "POST",
+			body: JSON.stringify({ name: "ペット", iconName: "paw-print" }),
+		})
+		const conflict = await app.request("/api/categories", {
+			method: "POST",
+			body: JSON.stringify({ name: "食費", iconName: "utensils" }),
+		})
+
+		// Assert
+		expect(created.status).toBe(201)
+		expect(await created.json()).toMatchObject({
+			name: "ペット",
+			iconName: "paw-print",
+			isInitial: false,
+		})
+		expect(conflict.status).toBe(409)
+		expect(await conflict.json()).toMatchObject({ error: { code: "CATEGORY_NAME_CONFLICT" } })
+	})
+
+	it("returns the same 404 response for unavailable category changes", async () => {
+		// Arrange
+		const authorization = createAuthorizationContext()
+		const app = createHttpApp({
+			...unusedMonthlyDependencies(),
+			authenticationMiddleware: [createAuthenticatedUserMiddleware(() => "clerk_user_verified")],
+			bootstrapUseCase: {
+				execute: async () => {
+					throw new Error("Unexpected bootstrap")
+				},
+			},
+			resolveAuthorizationUseCase: { execute: async () => authorization },
+			updateCategoryUseCase: {
+				execute: async () => {
+					throw new CategoryNotFoundError()
+				},
+			},
+			deleteCategoryUseCase: {
+				execute: async () => {
+					throw new CategoryNotFoundError()
+				},
+			},
+		})
+
+		// Act
+		const renamed = await app.request("/api/categories/00000000-0000-4000-8000-000000000099", {
+			method: "PATCH",
+			body: JSON.stringify({ name: "変更", iconName: "tag" }),
+		})
+		const deleted = await app.request("/api/categories/00000000-0000-4000-8000-000000000099", {
+			method: "DELETE",
+		})
+
+		// Assert
+		expect(renamed.status).toBe(404)
+		expect(deleted.status).toBe(404)
+		expect(await renamed.json()).toEqual(await deleted.json())
+	})
 
 	it.each([
 		["VALIDATION_ERROR", new InvalidValueError("OUT_OF_RANGE"), 400],
@@ -297,6 +404,7 @@ describe("HTTP app", () => {
 			expenses: [],
 		}
 		const app = createHttpApp({
+			...unusedMonthlyDependencies(),
 			authenticationMiddleware: [createAuthenticatedUserMiddleware(() => "clerk_user_verified")],
 			bootstrapUseCase: {
 				execute: async () => {

@@ -4,6 +4,7 @@ import type { HouseholdId } from "../../household/value-objects/household-id"
 export type MonthlyCategoryRecord = Readonly<{
 	id: string
 	name: string
+	iconName: string
 	budgetAmount: number | null
 	expenseAmount: number
 }>

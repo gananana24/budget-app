@@ -18,8 +18,8 @@ export function ExpenseList({
 	label,
 	editMonth,
 }: ExpenseListProps) {
-	const categoryNames = new Map(
-		overview.categories.map((category) => [category.id, category.name] as const),
+	const categoriesById = new Map(
+		overview.categories.map((category) => [category.id, category] as const),
 	)
 
 	if (expenses.length === 0) {
@@ -37,8 +37,11 @@ export function ExpenseList({
 		<ul className="mt-4 space-y-1 rounded-2xl bg-white p-2" aria-label={label}>
 			{expenses.map((expense) => {
 				const categoryName = expense.categoryId
-					? (categoryNames.get(expense.categoryId) ?? messages.expenses.hiddenCategory())
+					? (categoriesById.get(expense.categoryId)?.name ?? messages.expenses.hiddenCategory())
 					: messages.monthly.uncategorized()
+				const categoryIconName = expense.categoryId
+					? (categoriesById.get(expense.categoryId)?.iconName ?? "tag")
+					: "circle-help"
 				return (
 					<li key={expense.id}>
 						{editMonth ? (
@@ -48,7 +51,11 @@ export function ExpenseList({
 								search={{ month: editMonth }}
 								className="flex min-h-18 items-center justify-between gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-[var(--budget-primary-soft)] focus-visible:outline-2 focus-visible:outline-[var(--budget-primary)]"
 							>
-								<ExpenseRowContent expense={expense} categoryName={categoryName} />
+								<ExpenseRowContent
+									expense={expense}
+									categoryName={categoryName}
+									categoryIconName={categoryIconName}
+								/>
 								<ChevronRight
 									aria-hidden="true"
 									className="size-4 shrink-0 text-muted-foreground"
@@ -57,7 +64,11 @@ export function ExpenseList({
 							</Link>
 						) : (
 							<div className="flex min-h-17 items-center justify-between gap-3 px-3 py-3">
-								<ExpenseRowContent expense={expense} categoryName={categoryName} />
+								<ExpenseRowContent
+									expense={expense}
+									categoryName={categoryName}
+									categoryIconName={categoryIconName}
+								/>
 							</div>
 						)}
 					</li>
@@ -70,10 +81,11 @@ export function ExpenseList({
 function ExpenseRowContent({
 	expense,
 	categoryName,
-}: Readonly<{ expense: MonthlyExpense; categoryName: string }>) {
+	categoryIconName,
+}: Readonly<{ expense: MonthlyExpense; categoryName: string; categoryIconName: string }>) {
 	return (
 		<>
-			<CategoryIcon name={categoryName} />
+			<CategoryIcon iconName={categoryIconName} />
 			<div className="min-w-0 flex-1">
 				<p className="app-text-ink line-clamp-2 text-[0.9375rem] font-semibold">
 					{expense.memo || categoryName}

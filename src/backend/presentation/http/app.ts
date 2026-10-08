@@ -1,12 +1,17 @@
 import { Hono, type MiddlewareHandler } from "hono"
 import type { ResolveAuthorizationUseCase } from "../../usecase/authorization/resolve-authorization-use-case"
 import type { BootstrapUseCase } from "../../usecase/bootstrap/bootstrap-use-case"
+import type { CreateCategoryUseCase } from "../../usecase/category/create-category-use-case"
+import type { DeleteCategoryUseCase } from "../../usecase/category/delete-category-use-case"
+import type { ListCategoriesUseCase } from "../../usecase/category/list-categories-use-case"
+import type { UpdateCategoryUseCase } from "../../usecase/category/update-category-use-case"
 import type { CreateExpenseUseCase } from "../../usecase/expense/create-expense-use-case"
 import type { DeleteExpenseUseCase } from "../../usecase/expense/delete-expense-use-case"
 import type { UpdateExpenseUseCase } from "../../usecase/expense/update-expense-use-case"
 import type { GetMonthlyOverviewUseCase } from "../../usecase/monthly/get-monthly-overview-use-case"
 import type { HttpEnvironment } from "./authentication"
 import { BootstrapApiRouteHandler } from "./bootstrap/handlers/bootstrap-api-route-handler"
+import { CategoryApiRouteHandler } from "./category/handlers/category-api-route-handler"
 import { domainErrorResponse, notFoundResponse, unexpectedErrorResponse } from "./error-response"
 import { ChangeExpenseApiRouteHandler } from "./expense/handlers/change-expense-api-route-handler"
 import { CreateExpenseApiRouteHandler } from "./expense/handlers/create-expense-api-route-handler"
@@ -23,6 +28,10 @@ type HttpAppDependencies = Readonly<{
 	updateExpenseUseCase: UpdateExpenseUseCase
 	deleteExpenseUseCase: DeleteExpenseUseCase
 	getMonthlyOverviewUseCase: GetMonthlyOverviewUseCase
+	listCategoriesUseCase: ListCategoriesUseCase
+	createCategoryUseCase: CreateCategoryUseCase
+	updateCategoryUseCase: UpdateCategoryUseCase
+	deleteCategoryUseCase: DeleteCategoryUseCase
 }>
 
 export function createHttpApp({
@@ -33,6 +42,10 @@ export function createHttpApp({
 	updateExpenseUseCase,
 	deleteExpenseUseCase,
 	getMonthlyOverviewUseCase,
+	listCategoriesUseCase,
+	createCategoryUseCase,
+	updateCategoryUseCase,
+	deleteCategoryUseCase,
 }: HttpAppDependencies): Hono<HttpEnvironment> {
 	const app = new Hono<HttpEnvironment>()
 
@@ -50,6 +63,13 @@ export function createHttpApp({
 	new GetMonthlyOverviewApiRouteHandler(
 		resolveAuthorizationUseCase,
 		getMonthlyOverviewUseCase,
+	).registerRoutes(app)
+	new CategoryApiRouteHandler(
+		resolveAuthorizationUseCase,
+		listCategoriesUseCase,
+		createCategoryUseCase,
+		updateCategoryUseCase,
+		deleteCategoryUseCase,
 	).registerRoutes(app)
 
 	app.notFound(notFoundResponse)

@@ -12,6 +12,7 @@ const CATEGORY_SQL = `
 SELECT
   categories.id::text AS id,
   categories.name,
+  categories.icon_name,
   monthly_budgets.amount AS budget_amount,
   COALESCE(SUM(expenses.amount), 0)::text AS expense_amount
 FROM public.categories
@@ -29,6 +30,7 @@ WHERE categories.household_id IS NULL
 GROUP BY
   categories.id,
   categories.name,
+  categories.icon_name,
   categories.household_id,
   categories.seed_key,
   categories.created_at,
@@ -114,13 +116,18 @@ function readRecord(value: unknown, errorMessage: string): Record<string, unknow
 
 function readCategory(value: unknown): MonthlyCategoryRecord {
 	const row = readRecord(value, "Category query returned an invalid row")
-	if (typeof row.id !== "string" || typeof row.name !== "string") {
+	if (
+		typeof row.id !== "string" ||
+		typeof row.name !== "string" ||
+		typeof row.icon_name !== "string"
+	) {
 		throw new Error("Category query returned invalid category fields")
 	}
 
 	return {
 		id: row.id,
 		name: row.name,
+		iconName: row.icon_name,
 		budgetAmount:
 			row.budget_amount === null ? null : readSafeInteger(row.budget_amount, "category budget"),
 		expenseAmount: readSafeInteger(row.expense_amount, "category expenses"),

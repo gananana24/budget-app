@@ -228,6 +228,7 @@ MVPでは家計名と`updated_at`を保存しない。
 | `id` | `uuid PRIMARY KEY DEFAULT gen_random_uuid()` | 費目ID。 |
 | `household_id` | `uuid NULL REFERENCES households(id) ON DELETE CASCADE` | 初期費目では`NULL`。追加費目では所属する家計。 |
 | `name` | `text NOT NULL CHECK (char_length(name) BETWEEN 1 AND 50 AND name !~ '^[[:space:]]' AND name !~ '[[:space:]]$')` | 前後の空白を除いた表示名。家計内で一意。 |
+| `icon_name` | `text NOT NULL DEFAULT 'tag'`、小文字英数字とハイフン、1〜64文字 | Lucideのアイコン名。APIで導入済みアイコン一覧と照合する。 |
 | `seed_key` | `text NULL CHECK (seed_key IN ('food', 'daily_goods', 'housing', 'utilities', 'communications', 'transportation', 'medical', 'entertainment', 'other'))` | 初期費目の固定識別子。追加費目では`NULL`。 |
 | `created_at` | `timestamptz NOT NULL DEFAULT now()` | 追加された時刻。 |
 | `updated_at` | `timestamptz NOT NULL DEFAULT now()` | 追加費目の名前を最後に変更した時刻。更新SQLで`now()`へ変更する。 |
@@ -327,6 +328,8 @@ MVPでは入力者の利用者IDを保存しない。
 | `POST /api/categories` | 追加費目を作成する。`seed_key`は受け取らない。 |
 | `PATCH /api/categories/:categoryId` | 追加費目の名前を変更する。初期費目は拒否する。 |
 | `DELETE /api/categories/:categoryId` | 追加費目を削除する。関連する支出は未分類へ戻し、費目別予算は削除する。初期費目は拒否する。 |
+
+画面では「カテゴリー」と表示する。`GET /api/categories`は初期9件を固定順、追加分を作成順で返し、各要素に`id`・`name`・`iconName`・`isInitial`を含める。作成・更新では`{ "name": "...", "iconName": "..." }`を受け取り、前後の空白を除いた名前とLucideのアイコン名を返す。アイコン名は導入したLucideパッケージの候補に含まれるものだけをAPIで許可し、`categories.icon_name`に保存する。月次APIのカテゴリーにも`iconName`を含め、ホーム・支出・設定で同じアイコンを描画する。家計内の大文字・小文字を区別しない重複は`409`とし、初期カテゴリー・他家計・存在しないIDの変更と削除は同じ`404`を返す。削除確認には支出の未分類化と全月の該当予算削除を明記する。
 
 ### 予算
 

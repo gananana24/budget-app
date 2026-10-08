@@ -14,6 +14,7 @@ export function CategoryBreakdown({ overview, preview = false }: CategoryBreakdo
 		...overview.categories.map((category) => ({
 			id: category.id,
 			name: category.name,
+			iconName: category.iconName,
 			expenses: category.expenses,
 			budget: category.budget,
 			remaining: category.remaining,
@@ -23,6 +24,7 @@ export function CategoryBreakdown({ overview, preview = false }: CategoryBreakdo
 					{
 						id: "uncategorized",
 						name: messages.monthly.uncategorized(),
+						iconName: "circle-help",
 						expenses: overview.uncategorized.expenses,
 						budget: null,
 						remaining: null,
@@ -55,7 +57,7 @@ export function CategoryBreakdown({ overview, preview = false }: CategoryBreakdo
 						key={category.id}
 						className="flex min-w-0 items-center justify-between gap-3 px-1 py-2.5"
 					>
-						<CategoryIcon name={category.name} />
+						<CategoryIcon iconName={category.iconName} />
 						<div className="min-w-0 flex-1">
 							<p className="app-text-ink truncate text-sm font-semibold">{category.name}</p>
 							{category.budget !== null ? (

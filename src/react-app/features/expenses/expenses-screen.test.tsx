@@ -19,6 +19,7 @@ const EMPTY_OVERVIEW: MonthlyOverview = {
 		{
 			id: "00000000-0000-4000-8000-000000000020",
 			name: "食費",
+			iconName: "utensils",
 			budget: { status: "unset" },
 			expenses: 0,
 			remaining: null,
@@ -349,6 +350,7 @@ describe("expenses screen", () => {
 				{
 					id: "00000000-0000-4000-8000-000000000021",
 					name: "日用品",
+					iconName: "shopping-basket",
 					budget: { status: "unset" as const },
 					expenses: 0,
 					remaining: null,

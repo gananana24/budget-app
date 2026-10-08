@@ -20,6 +20,7 @@ export type MonthlyOverview = Readonly<{
 	categories: readonly Readonly<{
 		id: string
 		name: string
+		iconName: string
 		budget: UnsetBudget | SetBudget
 		expenses: number
 		remaining: number | null
@@ -84,6 +85,7 @@ export class DefaultGetMonthlyOverviewUseCase implements GetMonthlyOverviewUseCa
 			categories: record.categories.map((category) => ({
 				id: category.id,
 				name: category.name,
+				iconName: category.iconName,
 				budget:
 					category.budgetAmount === null
 						? { status: "unset" as const }
