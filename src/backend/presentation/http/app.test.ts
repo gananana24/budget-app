@@ -105,6 +105,35 @@ describe("HTTP app", () => {
 		})
 	}
 
+	it("protects API responses and logs request metadata without request content", async () => {
+		// Arrange
+		const app = createAuthenticatedApp()
+		const log = vi.spyOn(console, "info").mockImplementation(() => {})
+
+		// Act
+		const response = await app.request("/api/expenses?token=private-value", {
+			method: "POST",
+			headers: { "content-type": "application/json", "cf-ray": "ray-test" },
+			body: JSON.stringify({ date: "2026-10-05", amount: "private-value" }),
+		})
+
+		// Assert
+		expect(response.status).toBe(400)
+		expect(response.headers.get("X-Request-Id")).toBe("ray-test")
+		expect(response.headers.get("Cache-Control")).toBe("no-store")
+		expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff")
+		expect(response.headers.get("X-Frame-Options")).toBe("DENY")
+		expect(log).toHaveBeenCalledOnce()
+		expect(JSON.parse(String(log.mock.calls[0]?.[0]))).toMatchObject({
+			event: "api_request",
+			requestId: "ray-test",
+			method: "POST",
+			route: "/api/expenses",
+			status: 400,
+		})
+		expect(String(log.mock.calls[0]?.[0])).not.toContain("private-value")
+	})
+
 	it("exposes category creation and maps duplicate names to a safe conflict response", async () => {
 		// Arrange
 		const authorization = createAuthorizationContext()

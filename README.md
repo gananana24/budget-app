@@ -110,17 +110,42 @@ task db:dump
 
 本番Workerは`DATABASE` Hyperdrive bindingを通してNeonへ接続します。Hyperdriveのクエリキャッシュは無効にし、書き込み直後の認可・家計データを常にDBから取得します。ローカルでは`wrangler.json`の`localConnectionString`が同じbindingをDocker PostgreSQLへ向けます。別の接続先を一時的に使う場合は、公式の`CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_DATABASE`環境変数で上書きできます。
 
-## デプロイ
+## 本番環境の準備とデプロイ
 
-Cloudflareへデプロイする前に、品質チェックを実行します。
+このアプリはCloudflare Workersの静的アセットと同一オリジンの`/api`、Clerkの本番インスタンス、Neon PostgreSQL、Cloudflare Hyperdriveを使います。以下は新しい環境で再現する順序です。CloudflareとClerkの本番設定には所有するドメインを使います。
 
-```bash
-pnpm check
-pnpm deploy
-```
+1. [Clerkの本番インスタンス](https://clerk.com/docs/guides/development/deployment/production)を作成し、本番ドメインとClerkが示すDNSレコードを設定します。[Google接続](https://clerk.com/docs/guides/configure/auth-strategies/social-connections/google)に本番用OAuthクライアントID・シークレットを登録し、Google以外のログイン方式を無効にします。Google側の公開状態と許可済みリダイレクトURIも確認します。Clerk本番の`pk_live_...`と`sk_live_...`を取得します。
+2. Neonで本番用PostgreSQLデータベースを用意します。Neonの接続情報から、マイグレーション用の**直接接続**URLを安全な保管場所に置きます。`db/migrations/`は本番DBへ明示的に適用します。zshでは次のように一時的に読み込み、適用状態を確認します。入力時のURLは画面にもシェル履歴にも表示されません。`task db:migrate`はローカルDB専用です。
 
-Cloudflareには`CLERK_PUBLISHABLE_KEY`と`CLERK_SECRET_KEY`をSecretsとして登録し、作成済みのHyperdriveを`DATABASE` bindingへ設定します。`VITE_CLERK_PUBLISHABLE_KEY`はフロントエンドのビルド環境へ設定します。
-秘密値をソースコードや`.env.example`へ書き込まないでください。
+   ```zsh
+   read -rs "DATABASE_URL?Neon direct URL: "
+   echo
+   export DATABASE_URL
+   pnpm exec dbmate --no-dump-schema up
+   pnpm exec dbmate --no-dump-schema status
+   unset DATABASE_URL
+   ```
+3. Cloudflare DashboardでNeonへのHyperdrive接続を作成し、クエリキャッシュを無効にします。`wrangler.json`の`hyperdrive[0].id`をその接続IDに置き換え、binding名`DATABASE`を維持します。現行のIDは別環境で作られた接続を指すため、新しいCloudflareアカウントではそのまま使えません。HyperdriveにはNeonの接続情報をCloudflare側で登録し、DB接続文字列をソースへ置きません。
+4. Cloudflareの対象アカウントへWranglerでログインし、`pnpm exec wrangler whoami`で対象を確認します。`pnpm exec wrangler secret put CLERK_PUBLISHABLE_KEY`と`pnpm exec wrangler secret put CLERK_SECRET_KEY`を対話入力で実行し、Clerk本番キーを登録します。`pnpm exec wrangler secret list`で名前を確認します。`CLERK_SECRET_KEY`を`VITE_`付き変数、`wrangler.json`の`vars`、通常ログへ入れません。
+5. ビルド環境にClerk本番の公開キーを`VITE_CLERK_PUBLISHABLE_KEY`として設定します。ローカルからデプロイする場合は、Git管理対象外の`.env.production.local`に`VITE_CLERK_PUBLISHABLE_KEY=pk_live_...`を保存できます。`pnpm check`を実行し、`pnpm build`後に次のコマンドが何も出力しないことを確認します。最後に`pnpm deploy`を実行し、Cloudflareの本番ドメインをWorkerに割り当てます。CIを使う場合も、ビルド時の公開キーとWorkerの2つのsecretをそれぞれの工程へ設定します。
+
+   ```bash
+   rg -l 'sk_live_|postgres(ql)?://' dist/client
+   ```
+
+`wrangler secret put`は即時にWorkerの新しいバージョンをデプロイします。既存公開環境でキーを変更するときは、先に対象環境と変更タイミングを確認してください。`wrangler.json`のHyperdrive IDやドメインを別環境へ合わせて変更した場合は、`pnpm cf-typegen`でbinding型を再生成します。
+
+### 公開後の確認
+
+本番URLをiPhoneのSafariとAndroidのChromeで開き、Googleログイン、初期化、今月の合計と一覧、支出の追加・編集・削除、カテゴリー管理、ログアウトを確認します。幅320px、375px、390px、412px相当でも横スクロール、入力時の拡大、下部操作の重なりがないか確認します。Safariの共有メニュー「ホーム画面に追加」とChromeの「アプリをインストール」から起動し、ブラウザのアドレスバーがない単独表示になることを確認します。PWAはオフライン利用を提供しません。
+
+`/manifest.webmanifest`、`/icon-192.png`、`/icon-512.png`、`/apple-touch-icon.png`が本番URLから取得できることも確認します。アイコンを変更した場合は`python3 scripts/generate-pwa-icons.py`でPNGを再生成します。ブラウザに古いアイコンが残る場合は、ホーム画面の追加をやり直します。
+
+### 障害の確認
+
+Cloudflare DashboardのWorker「Observability」でリクエスト、Logs、Tracesを確認します。APIログの`requestId`（レスポンスの`X-Request-Id`と同じ）、`route`、`status`、`durationMs`を使って失敗を追います。想定外エラーは`unhandled_error`としてエラー種別を記録し、本文、認証トークン、DB接続文字列、メモ、例外メッセージは通常ログへ記録しません。Clerkログイン失敗はClerkの本番インスタンスとGoogle OAuth設定、APIの5xxはCloudflareのログとHyperdrive接続、DBエラーはNeonの接続状態とmigration状態を順に確認します。
+
+本番への実際のGoogleログインとデータ操作は、Cloudflare・Clerk・Neonの本番アカウントと端末を使って公開後に確認する必要があります。`pnpm check`とWranglerのdry-runだけでは外部サービスの接続と端末でのホーム画面起動は保証できません。
 
 ## Issue開発ワークフロー
 

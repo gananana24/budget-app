@@ -7,6 +7,7 @@ export type HttpEnvironment = {
 	Bindings: Env
 	Variables: {
 		clerkUserId: ClerkUserId
+		requestId: string
 	}
 }
 

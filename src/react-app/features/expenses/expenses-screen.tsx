@@ -61,7 +61,11 @@ export function ExpensesScreen() {
 	return (
 		<>
 			<title>{formatDocumentTitle(title)}</title>
-			<main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-md px-6 pb-28 pt-5">
+			<main
+				id="main-content"
+				tabIndex={-1}
+				className="mx-auto w-full max-w-md px-6 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-5"
+			>
 				<header>
 					<div className="flex min-h-11 items-center justify-between gap-4">
 						<h1 className="app-text-ink text-2xl font-semibold tracking-tight">

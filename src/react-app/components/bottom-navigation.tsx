@@ -18,7 +18,7 @@ const navigationItems: readonly NavigationItem[] = [
 export function BottomNavigation() {
 	return (
 		<nav
-			className="bottom-navigation app-divider fixed inset-x-0 bottom-0 z-10 border-t bg-white"
+			className="bottom-navigation app-divider fixed inset-x-0 bottom-0 z-10 border-t bg-white pb-[env(safe-area-inset-bottom)]"
 			aria-label={messages.navigation.label()}
 		>
 			<ul className="mx-auto grid max-w-md grid-cols-3 px-2">
