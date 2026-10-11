@@ -12,17 +12,14 @@ import type { MonthlyOverview } from "../monthly/api/monthly-overview"
 
 const EMPTY_OVERVIEW: MonthlyOverview = {
 	month: "2026-10-01",
-	initialized: true,
-	totals: { budget: 0, expenses: 0, remaining: 0 },
+	totals: { expenses: 0 },
 	uncategorized: { expenses: 0 },
 	categories: [
 		{
 			id: "00000000-0000-4000-8000-000000000020",
 			name: "食費",
 			iconName: "utensils",
-			budget: { status: "unset" },
 			expenses: 0,
-			remaining: null,
 		},
 	],
 	expenses: [],
@@ -130,7 +127,7 @@ describe("expenses screen", () => {
 			const overview = isCreated
 				? {
 						...EMPTY_OVERVIEW,
-						totals: { budget: 0, expenses: 1_200, remaining: -1_200 },
+						totals: { expenses: 1_200 },
 						uncategorized: { expenses: 1_200 },
 						expenses: [createdExpense],
 					}
@@ -351,9 +348,7 @@ describe("expenses screen", () => {
 					id: "00000000-0000-4000-8000-000000000021",
 					name: "日用品",
 					iconName: "shopping-basket",
-					budget: { status: "unset" as const },
 					expenses: 0,
-					remaining: null,
 				},
 			],
 			expenses,

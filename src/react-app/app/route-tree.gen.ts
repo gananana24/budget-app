@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from "./routes/__root"
 import { Route as AppRouteImport } from "./routes/_app"
 import { Route as AppIndexRouteImport } from "./routes/_app.index"
-import { Route as AppBudgetRouteImport } from "./routes/_app.budget"
 import { Route as AppExpensesRouteImport } from "./routes/_app.expenses"
 import { Route as AppSettingsRouteImport } from "./routes/_app.settings"
 import { Route as AppExpensesNewRouteImport } from "./routes/_app.expenses_.new"
@@ -25,11 +24,6 @@ const AppRoute = AppRouteImport.update({
 const AppIndexRoute = AppIndexRouteImport.update({
   id: "/",
   path: "/",
-  getParentRoute: () => AppRoute,
-} as any)
-const AppBudgetRoute = AppBudgetRouteImport.update({
-  id: "/budget",
-  path: "/budget",
   getParentRoute: () => AppRoute,
 } as any)
 const AppExpensesRoute = AppExpensesRouteImport.update({
@@ -61,7 +55,6 @@ const AppExpensesExpenseIdEditRoute =
 
 export interface FileRoutesByFullPath {
   "/": typeof AppIndexRoute
-  "/budget": typeof AppBudgetRoute
   "/expenses": typeof AppExpensesRoute
   "/settings": typeof AppSettingsRoute
   "/expenses/new": typeof AppExpensesNewRoute
@@ -69,7 +62,6 @@ export interface FileRoutesByFullPath {
   "/expenses/$expenseId/edit": typeof AppExpensesExpenseIdEditRoute
 }
 export interface FileRoutesByTo {
-  "/budget": typeof AppBudgetRoute
   "/expenses": typeof AppExpensesRoute
   "/settings": typeof AppSettingsRoute
   "/": typeof AppIndexRoute
@@ -80,7 +72,6 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   "/_app": typeof AppRouteWithChildren
-  "/_app/budget": typeof AppBudgetRoute
   "/_app/expenses": typeof AppExpensesRoute
   "/_app/settings": typeof AppSettingsRoute
   "/_app/": typeof AppIndexRoute
@@ -92,7 +83,6 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | "/"
-    | "/budget"
     | "/expenses"
     | "/settings"
     | "/expenses/new"
@@ -100,7 +90,6 @@ export interface FileRouteTypes {
     | "/expenses/$expenseId/edit"
   fileRoutesByTo: FileRoutesByTo
   to:
-    | "/budget"
     | "/expenses"
     | "/settings"
     | "/"
@@ -110,7 +99,6 @@ export interface FileRouteTypes {
   id:
     | "__root__"
     | "/_app"
-    | "/_app/budget"
     | "/_app/expenses"
     | "/_app/settings"
     | "/_app/"
@@ -137,13 +125,6 @@ declare module "@tanstack/react-router" {
       path: "/"
       fullPath: "/"
       preLoaderRoute: typeof AppIndexRouteImport
-      parentRoute: typeof AppRoute
-    }
-    "/_app/budget": {
-      id: "/_app/budget"
-      path: "/budget"
-      fullPath: "/budget"
-      preLoaderRoute: typeof AppBudgetRouteImport
       parentRoute: typeof AppRoute
     }
     "/_app/expenses": {
@@ -185,7 +166,6 @@ declare module "@tanstack/react-router" {
 }
 
 interface AppRouteChildren {
-  AppBudgetRoute: typeof AppBudgetRoute
   AppExpensesRoute: typeof AppExpensesRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppIndexRoute: typeof AppIndexRoute
@@ -195,7 +175,6 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
-  AppBudgetRoute: AppBudgetRoute,
   AppExpensesRoute: AppExpensesRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppIndexRoute: AppIndexRoute,

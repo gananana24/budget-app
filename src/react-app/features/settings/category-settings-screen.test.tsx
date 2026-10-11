@@ -62,9 +62,7 @@ describe("settings category management", () => {
 		// Assert
 		expect(screen.queryByRole("button", { name: "食費を削除" })).not.toBeInTheDocument()
 		expect(screen.queryByRole("button", { name: "食費の名前を変更" })).not.toBeInTheDocument()
-		expect(
-			screen.getByText(/支出は未分類になり、すべての月のこのカテゴリーの予算は削除/),
-		).toBeInTheDocument()
+		expect(screen.getByText(/このカテゴリーを使った支出は未分類になります/)).toBeInTheDocument()
 	})
 
 	it("adds a trimmed category and refreshes the category list", async () => {

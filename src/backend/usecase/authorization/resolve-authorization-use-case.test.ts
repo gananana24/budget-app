@@ -20,7 +20,6 @@ describe("resolve authorization", () => {
 			findPersonalByOwnerUserId: async () => household,
 			findPersonalByMemberUserId: async () => household,
 			save: async (value) => value,
-			lock: async () => undefined,
 		}
 		const useCase = new DefaultResolveAuthorizationUseCase({
 			userRepository,
@@ -45,7 +44,6 @@ describe("resolve authorization", () => {
 			findPersonalByOwnerUserId: async () => null,
 			findPersonalByMemberUserId: async () => null,
 			save: async (value) => value,
-			lock: async () => undefined,
 		}
 		const useCase = new DefaultResolveAuthorizationUseCase({
 			userRepository,

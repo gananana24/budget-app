@@ -5,9 +5,7 @@ export type MonthlyCategory = Readonly<{
 	id: string
 	name: string
 	iconName: string
-	budget: Readonly<{ status: "unset" }> | Readonly<{ status: "set"; amount: number }>
 	expenses: number
-	remaining: number | null
 }>
 
 export type MonthlyExpense = Readonly<{
@@ -22,8 +20,7 @@ export type MonthlyExpense = Readonly<{
 
 export type MonthlyOverview = Readonly<{
 	month: string
-	initialized: boolean
-	totals: Readonly<{ budget: number; expenses: number; remaining: number }>
+	totals: Readonly<{ expenses: number }>
 	uncategorized: Readonly<{ expenses: number }>
 	categories: readonly MonthlyCategory[]
 	expenses: readonly MonthlyExpense[]

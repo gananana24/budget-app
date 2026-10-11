@@ -1,6 +1,6 @@
 # 家計簿アプリ 技術構成
 
-更新日: 2026-10-04
+更新日: 2026-10-11
 
 機能と運用上の要件は [MVP要件](./mvp-spec.md)、バックエンドの構造と各層の責務は [バックエンド設計](./backend-architecture.md) にまとめる。
 
@@ -36,6 +36,7 @@ flowchart TB
 - `infrastructure/postgres`はDomain Repositoryを実装し、PostgreSQLの詳細を内側へ漏らさない。
 - `usecase`は一つのpublic `execute`を持つUseCase interfaceと具象classで処理を調整し、`domain`のEntity、Value Object、Repositoryを利用する。
 - `domain`は最も内側に置き、Hono、Clerk、PostgreSQL、Cloudflare Workersへ依存しない。
+- 月次集計と月初日のValue Objectは`domain/monthly`に置き、月次取得UseCaseは`usecase/monthly`、SQL Repositoryは`infrastructure/postgres/monthly`に置く。
 
 ## フロントエンドの依存関係
 
@@ -97,7 +98,6 @@ flowchart TB
 - 費目一覧にはアプリ共通の初期費目と、その家計で作成した追加費目を表示する。初期費目は固定順、追加費目は作成順とし、名前変更で順番を変えず、MVPでは並べ替え機能と専用の順序列を設けない。
 - 費目の`created_at`は表示順と管理用にだけ使い、費目の有効開始日としては扱わない。追加した費目を、その作成前の日付の支出にも使用できる。
 - `categories.updated_at`を持たせ、追加費目の名前変更SQLで`updated_at = now()`を明示する。
-- `monthly_budgets`に`created_at`と`updated_at`を持たせる。予算額の更新SQLで`updated_at = now()`を明示する。
 - `users`には`updated_at`を設けない。MVPの`users`に更新対象の列はないため、将来、利用者設定などを追加した時点で再検討する。
 - `users.clerk_user_id`は利用者作成時に保存し、その後は変更しない。Googleアカウントのメールアドレス変更では付け替えず、別のClerk利用者IDへの移行やアカウント統合はMVPで扱わない。
 - `users.created_at`はDBの`now()`で記録する。利用開始時期や初期化処理の調査に使い、MVPの画面には表示しない。
@@ -105,38 +105,22 @@ flowchart TB
 - `households`には`updated_at`を設けない。MVPには家計名や設定などの更新対象がないため、変更可能な列を追加する時点で再検討する。
 - `categories.household_id`は、アプリ共通の初期費目では`NULL`、利用者が追加した費目では所属する家計IDとする。初期費目は家計ごとに複製しない。
 - `categories.seed_key`は初期費目だけに設定し、`food`、`daily_goods`、`housing`、`utilities`、`communications`、`transportation`、`medical`、`entertainment`、`other`の9種類だけをDBの`CHECK`制約で許可する。利用者が追加した費目では`NULL`とする。
-- 初期費目はDBマイグレーションで一度だけ登録する。`seed_key`と名前の変更・行の削除はDBトリガーでも拒否し、費目の更新APIでは`seed_key`を入力として受け取らない。
+- 初期カテゴリーはDBマイグレーションで一度だけ登録する。`seed_key`と名前の変更・行の削除はDBトリガーでも拒否し、費目の更新APIでは`seed_key`を入力として受け取らない。
 - 費目名はAPIで前後の空白を除去し、DBでも先頭・末尾が空白文字ではないことを`CHECK`制約で保証する。文字数制約と合わせ、アプリ以外のSQLから不整合な名前が保存されることも防ぐ。
-- 支出の費目は任意とし、`expenses.category_id`の`NULL`を「未分類」として扱う。未分類の支出も月全体の集計に含めるが、費目別予算と残額は持たせない。費目絞り込みでは`NULL`を未分類として指定できるようにする。
-- `users`・`households`・`categories`・`expenses`の主キーはPostgreSQLの`uuid`型とし、DBで`gen_random_uuid()`により生成する。`household_members`・`budget_periods`・`monthly_budgets`は、それぞれの組み合わせを複合主キーとする。
-- 支出額と費目別予算額は1円単位の`integer`型で保存する。支出は正、予算は0以上の制約を設ける。`SUM(integer)`の結果は`bigint`なので、APIで安全に数値として扱える範囲を確認する。
+- 支出のカテゴリーは任意とし、`expenses.category_id`の`NULL`を「未分類」として扱う。未分類の支出も月全体の集計に含め、カテゴリー絞り込みでは`NULL`を未分類として指定できるようにする。
+- `users`・`households`・`categories`・`expenses`の主キーはPostgreSQLの`uuid`型とし、DBで`gen_random_uuid()`により生成する。`household_members`は家計IDと利用者IDの複合主キーとする。
+- 支出額は1円単位の`integer`型で保存し、正の値に制約する。`SUM(integer)`の結果は`bigint`なので、APIで安全に数値として扱える範囲を確認する。
 - PostgreSQLから受け取る`bigint`の集計値は、APIでJavaScriptの安全な整数範囲内か確認してから`number`へ変換する。範囲を超えた場合は成功レスポンスを返さず、集計エラーとして扱う。
 - 支出額は1〜2,147,483,647円を画面・API・DBで検証する。
-- 費目別予算額は0〜2,147,483,647円を画面・API・DBで検証する。
-- 支出日は時刻を持たない`date`型で保存する。予算の対象月も`date`型で保存し、その月の1日を使う。
+- 支出日は時刻を持たない`date`型で保存する。
 - MVPの「今日」と「今月」は`Asia/Tokyo`で判定する。支出の未来日付チェックと最初に表示する月に同じ基準を使う。利用者が入力した支出日は日付そのものとして保存し、タイムゾーン変換しない。
 - 支出日にアプリ独自の下限は設けない。APIで厳密な`YYYY-MM-DD`形式と実在する日付を検証し、`Asia/Tokyo`の今日以前だけを許可する。
-- 支出・追加費目・予算などの家計データは家計IDに紐づける。初期費目だけはアプリ全体で共有する。MVPでは一つの家計に一人だけ所属し、共有操作は提供しない。
+- 支出・追加カテゴリーなどの家計データは家計IDに紐づける。初期費目だけはアプリ全体で共有する。MVPでは一つの家計に一人だけ所属し、共有操作は提供しない。
 - 個人用家計は、Clerkで認証した利用者が`POST /api/bootstrap`を呼んだときに作成する。利用者・家計・所属は、同時リクエストでも重複や作成途中の状態が残らないよう、DBの一意制約と一つのトランザクションで初期化する。作成用の`user.created` Webhookには依存しない。
 - 初期費目9件はbootstrapの責務に含めない。アプリ環境を構築する初期マイグレーションで共通データとして一度だけ登録し、家計作成時には追加しない。bootstrapは件数確認・修復・再投入を行わない。
-- bootstrap時に対象の家計行をロックし、その家計に`budget_periods`が一件もなければ日本時間の当月を最初の予算期間として作る。月境界をまたぐ同時実行でも一件だけを作り、すでに一件でもあれば後日の再送で新しい月を作らない。月ごとの予算引き継ぎは予算機能の責務とする。
 - 個人用家計の作成者は、家計の作成と同じDBトランザクションで`household_members`にも追加する。作成者の所属を保証する循環外部キーは設けず、この初期化処理とテストで整合性を確認する。
-- 予算は対象月ごとの行として保存する。初期化や保存では指定された対象月だけを作り、間の未初期化月は作らない。対象月より前で最も新しい初期化済み月から予算を直接引き継ぐ。一度作成した月の予算は、後から過去月を変更しても自動更新しない。
-- 過去月を閲覧するだけでは`budget_periods`や`monthly_budgets`を作成・更新しない。
-- `budget_periods`のない過去月の閲覧画面では、予算未設定として表示し、前月の予算額を確定済みの月予算に見せない。
-- 未初期化の過去月で予算編集を開くときは、対象月より前で最も新しい初期化済み月の費目別予算額を下書きの初期入力値として取得する。この時点ではDBへ書き込まず、保存操作時に対象月だけの`budget_periods`と必要な`monthly_budgets`を作成する。
-- 月の予算保存は、金額を入力した費目を1回のDBトランザクションで確定する。保存対象に空欄や不正な金額が含まれていれば拒否し、DBを変更しない。対象月の`budget_periods`を作成または確認し、指定された`monthly_budgets`を追加・更新する。予算を未設定に戻す操作は別の削除操作として実行し、該当する`monthly_budgets`行を削除する。途中の費目だけが保存された状態を残さない。
-- 「予算を削除」は確認ダイアログの確定後に実行する。金額0の保存は`amount = 0`の行を作成・更新し、未設定とは区別する。
-- 予算の保存・削除が成功したら、対象月の予算と集計をAPIから再取得して画面を更新する。保存前の下書きをそのまま正とみなさない。
-- 予算保存が失敗した場合は、入力中の下書きを画面に残し、エラーを表示して再試行できるようにする。失敗時は対象月の既存データを変更しない。
-- MVPでは予算の同時編集を検出しない。一つの家計に一人だけ所属するため、保存トランザクションが最後に成功した結果を採用する。共有機能の実装時にバージョン番号などによる競合検出を追加する。
-- 通常の予算保存APIには、金額が入力された費目だけを含める。未設定の費目は送信せず、未設定へ戻す場合は費目・対象月を指定する「予算を削除」APIを別に呼ぶ。空欄を未設定へ暗黙変換しない。
-- MVPの予算削除APIは対象月・費目ごとの操作だけを提供し、複数費目の一括削除は行わない。
-- 予算削除の確認画面では、対象月・費目名・現在額を表示し、未設定に戻す操作であることを明示する。
-- 費目別予算を未設定に戻す操作では、対象月の`monthly_budgets`行を削除する。`budget_periods`行は残して月の初期化状態を維持する。
-- 利用開始月より前の月を初期化するときも、対象月より前で最も新しい初期化済み月があれば、その月の予算行を直接引き継ぐ。該当する月がなければ未設定とする。間の月、現在月、すでに初期化した後続月は作成・再計算しない。
-- 追加費目は名前変更・削除できる。削除時は、その費目を参照する支出の`category_id`だけを`NULL`にして未分類へ戻し、支出自体は残す。その費目の`monthly_budgets`は削除し、`budget_periods`は残す。
-- 家計を削除したときは、その家計の所属・追加費目・支出・予算期間・費目別予算を外部キーの`ON DELETE CASCADE`で削除する。アプリ共通の初期費目は残す。
+- 追加カテゴリーは名前変更・削除できる。削除時は、そのカテゴリーを参照する支出の`category_id`だけを`NULL`にして未分類へ戻し、支出自体は残す。
+- 家計を削除したときは、その家計の所属・追加カテゴリー・支出を外部キーの`ON DELETE CASCADE`で削除する。アプリ共通の初期費目は残す。
 - 支出の作成・更新で指定する費目は、アプリ共通の初期費目または同じ家計の追加費目であることをAPIとDBで確認する。
 - 支出の作成・更新では費目を指定しないことも許可する。設定済みの費目を外す更新では`category_id`を`NULL`にして未分類へ戻す。
 - 支出の削除は`expenses`の行を物理削除する。画面では削除前に確認を求め、集計とCSVは残存する支出行のみを対象にする。
@@ -160,28 +144,10 @@ flowchart TB
 | `household_members` | 家計IDとアプリ独自の利用者ID。MVPでは個人用家計を作った人だけが所属する。 |
 | `categories` | 任意の家計ID、名前、初期費目の識別子。家計IDが`NULL`ならアプリ共通の初期費目、家計IDがあればその家計の追加費目。 |
 | `expenses` | 家計ID、任意の費目ID、支出日（`date`）、1円単位の金額（`integer`）、任意のメモ。費目IDが`NULL`なら未分類。MVPでは入力者IDを保存しない。 |
-| `budget_periods` | 家計IDと対象月（月初の`date`）。その月の予算を引き継ぎ済みかを記録する。費目別予算がすべて未設定の月も識別できる。 |
-| `monthly_budgets` | 家計ID、費目ID、対象月（月初の`date`）、1円単位の設定額（`integer`）。行がなければ未設定、0円の行があれば明示的な0円設定。 |
 
-- 支出で指定した費目と予算の費目は、アプリ共通の初期費目または同じ家計の追加費目であることをDBの外部キーとトリガーで保証する。
 - 所属は家計IDとアプリ独自の利用者IDの組を一意にし、個人用家計も利用者ごとに一つだけ作れるようにする。
-- `household_members`の主キーは家計ID・利用者ID、`budget_periods`の主キーは家計ID・対象月、`monthly_budgets`の主キーは家計ID・対象月・費目IDとする。これらに別の単独IDは設けない。
 - ログイン利用者から所属家計を取得する検索と将来の家計共有に備え、`household_members(user_id)`のインデックスを設ける。複合主キーは`household_id`から始まるため、`user_id`だけの検索にはこの別インデックスを使う。
-- `monthly_budgets`は主キーの先頭が家計ID・対象月であり、通常の月次取得に使えるため、MVPでは追加インデックスを設けない。
-- 予算期間の初期化と予算保存は、DBトランザクション内で対象の`households`行を`SELECT ... FOR UPDATE`によりロックしてから実行する。同じ家計の関連処理を直列化し、別の家計同士は並行して処理できるようにする。
-- 家計行のロックとそれに続く予算関連SQLは、同じ`pg`接続の一つのトランザクションで順に実行する。途中で失敗した場合は全体をロールバックする。
-- 予算関連トランザクションの分離レベルはPostgreSQL標準の`READ COMMITTED`とする。同一家計の競合は`SELECT ... FOR UPDATE`で直列化し、MVPでは`SERIALIZABLE`による競合検出と再試行処理を追加しない。
-- 予算関連トランザクションでは家計行をロックする前に`SET LOCAL lock_timeout = '3s'`を実行する。3秒以内にロックを取得できなければ全体を失敗させ、APIは再試行可能な競合エラーとして返す。画面は入力中の下書きを保持する。
-- 未初期化月の予算引き継ぎは、家計行のロック後に対象月だけを作成する一つのパラメータ化SQLで実行する。間の未初期化月には書き込まない。
-- 予算初期化SQLは冪等にする。対象月の`budget_periods`を`ON CONFLICT DO NOTHING RETURNING month_start`で追加し、新規作成できた場合だけ予算を引き継ぐ。`monthly_budgets`の追加も`ON CONFLICT DO NOTHING`で保護し、再送時に初期化済み月の予算を上書きしない。
-- 対象月より前で最も新しい初期化済み月に存在する`monthly_budgets`行だけをコピーする。その月で予算行を削除して未設定に戻した費目は、それより古い月の値を検索して復活させず、対象月も未設定とする。
-- コピー元の予算行が`amount = 0`なら、明示的な0円設定として対象月にも行をコピーする。行がない未設定とは区別する。
-- 引き継ぎで新しく作成する`monthly_budgets`行は、`created_at`と`updated_at`の両方にコピー実行時のDB時刻を設定する。コピー元の時刻は引き継がず、その月の行が作られた時刻を記録する。その後の手動変更時だけ`updated_at`を更新する。
-- 対象月の`budget_periods.initialized_at`には、予算状態をDBへ作成したトランザクション時刻を設定する。対象月そのものの日付は入れない。
-- MVPの予算APIは`Asia/Tokyo`の今月以前だけを受け付け、未来月の閲覧・編集・初期化を拒否する。新しい月は、その月になった後の最初の利用時に、それより前で最も新しい初期化済み月から直接引き継ぐ。
-- 予算引き継ぎSQLはPostgreSQLのストアドプロシージャにせず、`infrastructure/postgres/budget`のRepository実装として管理する。`usecase`はDomain Repositoryを呼び、`domain`はSQLやPostgreSQLへ依存しない。
 - 支出の未来日付禁止はAPIでも確認する。
-- `budget_periods`と`monthly_budgets`の対象月が月初日であることをDBの制約でも保証する。
 - 支出一覧と月次集計のため、`expenses(household_id, expense_date DESC, created_at DESC, id DESC)`のインデックスを設ける。
 - 費目による支出一覧の絞り込みは取得済みの月次データに対してブラウザ側で行うため、`expenses.category_id`用の追加インデックスはMVPでは設けない。
 - 初期費目の識別子を名前と分け、初期マイグレーションで9件だけ登録する。家計作成処理から初期費目を分離する。
@@ -234,7 +200,7 @@ MVPでは家計名と`updated_at`を保存しない。
 | `updated_at` | `timestamptz NOT NULL DEFAULT now()` | 追加費目の名前を最後に変更した時刻。更新SQLで`now()`へ変更する。 |
 
 `household_id IS NULL`と`seed_key IS NOT NULL`の組を初期費目、`household_id IS NOT NULL`と`seed_key IS NULL`の組を追加費目としてDB制約で保証する。初期費目は`seed_key`の固定順、追加費目は`created_at`と`id`の順で表示し、専用の順序列と表示順専用インデックスは設けない。
-初期費目の変更・削除はDBトリガーでも拒否する。追加費目を削除するときは、DBの外部キー動作によって支出を未分類へ戻し、費目別予算を削除する。
+初期費目の変更・削除はDBトリガーでも拒否する。追加費目を削除するときは、DBの外部キー動作によって支出を未分類へ戻す。
 
 ### `expenses`の列
 
@@ -251,34 +217,6 @@ MVPでは家計名と`updated_at`を保存しない。
 
 `category_id`は`categories(id)`への外部キーとし、DBトリガーで初期費目または同じ家計の追加費目だけに制限する。`category_id`が`NULL`なら未分類として扱う。追加費目の削除時は`ON DELETE SET NULL`により未分類へ戻す。
 MVPでは入力者の利用者IDを保存しない。
-
-### `budget_periods`の列
-
-| 列 | 型・制約 | 用途 |
-| --- | --- | --- |
-| `household_id` | `uuid NOT NULL REFERENCES households(id) ON DELETE CASCADE` | 家計。 |
-| `month_start` | `date NOT NULL CHECK (EXTRACT(DAY FROM month_start) = 1)` | 対象月の1日。 |
-| `initialized_at` | `timestamptz NOT NULL DEFAULT now()` | その月の予算初期化時刻。 |
-
-主キーは`(household_id, month_start)`。費目別予算が0件でも、初期化済みの月を識別できる。
-初期化時は`ON CONFLICT DO NOTHING`を使い、`RETURNING`で新しく作成された月だけを後続の予算コピー対象にする。
-
-### `monthly_budgets`の列
-
-| 列 | 型・制約 | 用途 |
-| --- | --- | --- |
-| `household_id` | `uuid NOT NULL` | 家計。対象月とともに予算期間への複合外部キーで保証する。 |
-| `month_start` | `date NOT NULL CHECK (EXTRACT(DAY FROM month_start) = 1)` | 対象月の1日。 |
-| `category_id` | `uuid NOT NULL` | アプリ共通の初期費目または同じ家計の追加費目。 |
-| `amount` | `integer NOT NULL CHECK (amount BETWEEN 0 AND 2147483647)` | 1円単位の費目別予算。 |
-| `created_at` | `timestamptz NOT NULL DEFAULT now()` | 予算行を作成した時刻。 |
-| `updated_at` | `timestamptz NOT NULL DEFAULT now()` | 予算額を最後に変更した時刻。更新SQLで`now()`へ変更する。 |
-
-主キーは`(household_id, month_start, category_id)`。`budget_periods(household_id, month_start)`と`categories(id)`へ外部キーを張り、DBトリガーで利用可能な費目の範囲を保証する。行がなければ未設定、0円の行があれば明示的な0円設定とする。追加費目を削除しても`budget_periods`は残る。
-「予算を削除」操作ではこの行を削除し、`budget_periods`は削除しない。通常の保存で空欄を未設定へ変換しない。
-主キーを家計ID・対象月の月次取得にも使い、MVPではこのテーブルに別のインデックスを追加しない。
-予算の初期化・保存時は対象の`households`行を先にロックし、同じ家計に対する同時処理を直列化する。
-初期化による追加は`ON CONFLICT DO NOTHING`とし、通常の予算保存で行う明示的な更新とは分ける。
 
 ## MVP後の退会機能案
 
@@ -299,18 +237,15 @@ MVPでは入力者の利用者IDを保存しない。
 
 | メソッド・パス | 用途 |
 | --- | --- |
-| `POST /api/bootstrap` | リクエスト本文を受け取らず、認証済み利用者、個人用家計、所属、最初の予算期間を冪等に初期化する。成功時は内部IDを返さず`204`とする。ログイン後とアプリ起動時に呼ぶ。 |
+| `POST /api/bootstrap` | リクエスト本文を受け取らず、認証済み利用者、個人用家計、所属を冪等に初期化する。成功時は内部IDを返さず`204`とする。ログイン後とアプリ起動時に呼ぶ。 |
 
 ### 月次画面
 
 | メソッド・パス | 用途 |
 | --- | --- |
-| `GET /api/months/:month` | 指定月の予算、支出、月全体と費目別の集計を取得する。未初期化の過去月は書き込まず、未設定として返す。 |
-| `GET /api/months/:month/budget-draft` | 未初期化月の予算編集用に、それより前で最も新しい初期化済み月から下書きを返す。DBは変更しない。 |
+| `GET /api/months/:month` | 指定月の支出、月全体とカテゴリー別の集計を取得する。未来月は拒否する。 |
 
-`GET /api/months/:month`は、対象月と予算期間の有無を`month`・`initialized`、月全体の予算・支出・残額を`totals`、未分類支出額を`uncategorized.expenses`として返す。費目ごとの`budget`は`{ "status": "unset" }`または`{ "status": "set", "amount": 0 }`のような判別可能な形とし、未設定と明示的な0円を区別する。未設定費目の`remaining`は`null`とする。`expenses`は`categoryId: null`で未分類を表し、支出日・作成時刻・IDの降順で返す。
-
-`GET /api/months/:month/budget-draft`は`{ "month": "YYYY-MM-01", "initialized": false, "budgets": [{ "categoryId": "...", "amount": 0 }] }`を返す。初期化済み月では`initialized: true`と対象月の保存済み予算行を返す。`budgets`には設定済みの行だけを含め、未設定の費目は含めない。0円の行は残す。
+このAPIは`month`、月全体の`totals.expenses`、`uncategorized.expenses`、カテゴリー別の支出額、月内の`expenses`を返す。カテゴリーが未設定の支出は`categoryId: null`で表し、支出日・作成時刻・IDの降順で返す。
 
 ### 支出
 
@@ -329,17 +264,4 @@ MVPでは入力者の利用者IDを保存しない。
 | `GET /api/categories` | 家計の費目一覧を取得する。 |
 | `POST /api/categories` | 追加費目を作成する。`seed_key`は受け取らない。 |
 | `PATCH /api/categories/:categoryId` | 追加費目の名前を変更する。初期費目は拒否する。 |
-| `DELETE /api/categories/:categoryId` | 追加費目を削除する。関連する支出は未分類へ戻し、費目別予算は削除する。初期費目は拒否する。 |
-
-画面では「カテゴリー」と表示する。`GET /api/categories`は初期9件を固定順、追加分を作成順で返し、各要素に`id`・`name`・`iconName`・`isInitial`を含める。作成・更新では`{ "name": "...", "iconName": "..." }`を受け取り、前後の空白を除いた名前とLucideのアイコン名を返す。アイコン名は導入したLucideパッケージの候補に含まれるものだけをAPIで許可し、`categories.icon_name`に保存する。月次APIのカテゴリーにも`iconName`を含め、ホーム・支出・設定で同じアイコンを描画する。家計内の大文字・小文字を区別しない重複は`409`とし、初期カテゴリー・他家計・存在しないIDの変更と削除は同じ`404`を返す。削除確認には支出の未分類化と全月の該当予算削除を明記する。
-
-### 予算
-
-| メソッド・パス | 用途 |
-| --- | --- |
-| `PUT /api/months/:month/budgets` | 金額を入力した複数費目の予算を一つのトランザクションで追加・更新する。未初期化なら対象月だけを初期化する。 |
-| `DELETE /api/months/:month/budgets/:categoryId` | 一つの費目別予算を削除して未設定へ戻す。`budget_periods`は残す。 |
-
-通常の予算保存と削除を別APIにし、空欄を削除へ暗黙変換しない。未来月はすべての月次・予算APIで拒否する。
-
-`PUT /api/months/:month/budgets`は`{ "budgets": [{ "categoryId": "...", "amount": 0 }] }`を受け取る。配列は1件以上とし、費目IDの重複、無効な金額、利用できない費目を拒否する。成功時は`200`で`budget-draft`と同じ形式の対象月の確定済み状態を返す。送信しなかった費目は変更しない。`DELETE`は対象月にその費目の予算行がある場合に`204`を返し、行がない場合や他家計の費目は同じ`404`を返す。家計行ロックを3秒で取得できなければ、再試行可能な`BUDGET_LOCK_CONFLICT`を`409`で返す。
+| `DELETE /api/categories/:categoryId` | 追加カテゴリーを削除する。関連する支出は未分類へ戻す。初期カテゴリーは拒否する。 |

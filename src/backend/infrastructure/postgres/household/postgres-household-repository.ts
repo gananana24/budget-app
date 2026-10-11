@@ -35,13 +35,6 @@ SET personal_owner_user_id = EXCLUDED.personal_owner_user_id
 RETURNING id::text, personal_owner_user_id::text AS "personalOwnerUserId"
 `
 
-const LOCK_HOUSEHOLD_SQL = `
-SELECT id
-FROM public.households
-WHERE id = $1
-FOR UPDATE
-`
-
 function toHousehold(row: HouseholdRow): Household {
 	return Household.restore(HouseholdId.from(row.id), DomainUserId.from(row.personalOwnerUserId))
 }
@@ -72,12 +65,5 @@ export class PostgresHouseholdRepository implements HouseholdRepository {
 		}
 
 		return toHousehold(row)
-	}
-
-	async lock(householdId: HouseholdId): Promise<void> {
-		const result = await this.client.query(LOCK_HOUSEHOLD_SQL, [householdId.value])
-		if (result.rowCount !== 1) {
-			throw new Error("Household lock target was not found")
-		}
 	}
 }

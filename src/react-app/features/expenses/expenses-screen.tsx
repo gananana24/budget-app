@@ -183,8 +183,7 @@ export function ExpensesScreen() {
 								/>
 							)}
 						</section>
-						{query.data.totals.expenses > 0 ||
-						query.data.categories.some((category) => category.budget.status === "set") ? (
+						{query.data.totals.expenses > 0 ? (
 							<section
 								id="categories"
 								className="mt-12 scroll-mt-6"

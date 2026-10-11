@@ -67,15 +67,6 @@ VALUES
   ('娯楽費', 'entertainment'),
   ('その他', 'other');
 
-CREATE TABLE public.budget_periods (
-  household_id uuid NOT NULL
-    REFERENCES public.households(id) ON DELETE CASCADE,
-  month_start date NOT NULL
-    CHECK (EXTRACT(DAY FROM month_start) = 1),
-  initialized_at timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (household_id, month_start)
-);
-
 CREATE TABLE public.expenses (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   household_id uuid NOT NULL
@@ -92,24 +83,6 @@ CREATE TABLE public.expenses (
   FOREIGN KEY (category_id)
     REFERENCES public.categories(id)
     ON DELETE SET NULL
-);
-
-CREATE TABLE public.monthly_budgets (
-  household_id uuid NOT NULL,
-  month_start date NOT NULL
-    CHECK (EXTRACT(DAY FROM month_start) = 1),
-  category_id uuid NOT NULL,
-  amount integer NOT NULL
-    CHECK (amount BETWEEN 0 AND 2147483647),
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (household_id, month_start, category_id),
-  FOREIGN KEY (household_id, month_start)
-    REFERENCES public.budget_periods(household_id, month_start)
-    ON DELETE CASCADE,
-  FOREIGN KEY (category_id)
-    REFERENCES public.categories(id)
-    ON DELETE CASCADE
 );
 
 CREATE UNIQUE INDEX categories_household_lower_name_idx
@@ -162,11 +135,6 @@ BEFORE INSERT OR UPDATE OF household_id, category_id ON public.expenses
 FOR EACH ROW
 EXECUTE FUNCTION public.ensure_category_available_to_household();
 
-CREATE TRIGGER monthly_budgets_ensure_category_available
-BEFORE INSERT OR UPDATE OF household_id, category_id ON public.monthly_budgets
-FOR EACH ROW
-EXECUTE FUNCTION public.ensure_category_available_to_household();
-
 CREATE FUNCTION public.protect_category_invariants()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -216,12 +184,9 @@ EXECUTE FUNCTION public.protect_category_invariants();
 
 DROP TRIGGER categories_protect_invariants ON public.categories;
 DROP FUNCTION public.protect_category_invariants();
-DROP TRIGGER monthly_budgets_ensure_category_available ON public.monthly_budgets;
 DROP TRIGGER expenses_ensure_category_available ON public.expenses;
 DROP FUNCTION public.ensure_category_available_to_household();
-DROP TABLE public.monthly_budgets;
 DROP TABLE public.expenses;
-DROP TABLE public.budget_periods;
 DROP TABLE public.categories;
 DROP TABLE public.household_members;
 DROP TABLE public.households;

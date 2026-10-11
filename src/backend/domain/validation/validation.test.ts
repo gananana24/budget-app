@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { validateDate, validateExpenseDate, validateMonth } from "./date"
-import { validateBudgetAmount, validateExpenseAmount } from "./money"
+import { validateExpenseAmount } from "./money"
 import { normalizeCategoryName, normalizeMemo } from "./text"
 
 describe("date validation", () => {
@@ -84,28 +84,6 @@ describe("money validation", () => {
 
 		// Assert
 		expect(result).toEqual(expected)
-	})
-
-	it("allows an explicit zero budget", () => {
-		// Arrange
-		const amount = 0
-
-		// Act
-		const result = validateBudgetAmount(amount)
-
-		// Assert
-		expect(result).toEqual({ success: true, value: amount })
-	})
-
-	it("rejects a budget above the PostgreSQL integer limit", () => {
-		// Arrange
-		const amount = 2_147_483_648
-
-		// Act
-		const result = validateBudgetAmount(amount)
-
-		// Assert
-		expect(result).toEqual({ success: false, code: "OUT_OF_RANGE" })
 	})
 })
 

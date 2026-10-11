@@ -103,18 +103,6 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
--- Name: budget_periods; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.budget_periods (
-    household_id uuid NOT NULL,
-    month_start date NOT NULL,
-    initialized_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT budget_periods_month_start_check CHECK ((EXTRACT(day FROM month_start) = (1)::numeric))
-);
-
-
---
 -- Name: categories; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -173,22 +161,6 @@ CREATE TABLE public.households (
 
 
 --
--- Name: monthly_budgets; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.monthly_budgets (
-    household_id uuid NOT NULL,
-    month_start date NOT NULL,
-    category_id uuid NOT NULL,
-    amount integer NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT monthly_budgets_amount_check CHECK (((amount >= 0) AND (amount <= 2147483647))),
-    CONSTRAINT monthly_budgets_month_start_check CHECK ((EXTRACT(day FROM month_start) = (1)::numeric))
-);
-
-
---
 -- Name: schema_migrations; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -206,14 +178,6 @@ CREATE TABLE public.users (
     clerk_user_id text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
-
-
---
--- Name: budget_periods budget_periods_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.budget_periods
-    ADD CONSTRAINT budget_periods_pkey PRIMARY KEY (household_id, month_start);
 
 
 --
@@ -262,14 +226,6 @@ ALTER TABLE ONLY public.households
 
 ALTER TABLE ONLY public.households
     ADD CONSTRAINT households_pkey PRIMARY KEY (id);
-
-
---
--- Name: monthly_budgets monthly_budgets_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.monthly_budgets
-    ADD CONSTRAINT monthly_budgets_pkey PRIMARY KEY (household_id, month_start, category_id);
 
 
 --
@@ -346,21 +302,6 @@ CREATE TRIGGER expenses_ensure_category_available BEFORE INSERT OR UPDATE OF hou
 
 
 --
--- Name: monthly_budgets monthly_budgets_ensure_category_available; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER monthly_budgets_ensure_category_available BEFORE INSERT OR UPDATE OF household_id, category_id ON public.monthly_budgets FOR EACH ROW EXECUTE FUNCTION public.ensure_category_available_to_household();
-
-
---
--- Name: budget_periods budget_periods_household_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.budget_periods
-    ADD CONSTRAINT budget_periods_household_id_fkey FOREIGN KEY (household_id) REFERENCES public.households(id) ON DELETE CASCADE;
-
-
---
 -- Name: categories categories_household_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -406,22 +347,6 @@ ALTER TABLE ONLY public.household_members
 
 ALTER TABLE ONLY public.households
     ADD CONSTRAINT households_personal_owner_user_id_fkey FOREIGN KEY (personal_owner_user_id) REFERENCES public.users(id);
-
-
---
--- Name: monthly_budgets monthly_budgets_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.monthly_budgets
-    ADD CONSTRAINT monthly_budgets_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.categories(id) ON DELETE CASCADE;
-
-
---
--- Name: monthly_budgets monthly_budgets_household_id_month_start_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.monthly_budgets
-    ADD CONSTRAINT monthly_budgets_household_id_month_start_fkey FOREIGN KEY (household_id, month_start) REFERENCES public.budget_periods(household_id, month_start) ON DELETE CASCADE;
 
 
 --
