@@ -310,6 +310,8 @@ MVPでは入力者の利用者IDを保存しない。
 
 `GET /api/months/:month`は、対象月と予算期間の有無を`month`・`initialized`、月全体の予算・支出・残額を`totals`、未分類支出額を`uncategorized.expenses`として返す。費目ごとの`budget`は`{ "status": "unset" }`または`{ "status": "set", "amount": 0 }`のような判別可能な形とし、未設定と明示的な0円を区別する。未設定費目の`remaining`は`null`とする。`expenses`は`categoryId: null`で未分類を表し、支出日・作成時刻・IDの降順で返す。
 
+`GET /api/months/:month/budget-draft`は`{ "month": "YYYY-MM-01", "initialized": false, "budgets": [{ "categoryId": "...", "amount": 0 }] }`を返す。初期化済み月では`initialized: true`と対象月の保存済み予算行を返す。`budgets`には設定済みの行だけを含め、未設定の費目は含めない。0円の行は残す。
+
 ### 支出
 
 | メソッド・パス | 用途 |
@@ -339,3 +341,5 @@ MVPでは入力者の利用者IDを保存しない。
 | `DELETE /api/months/:month/budgets/:categoryId` | 一つの費目別予算を削除して未設定へ戻す。`budget_periods`は残す。 |
 
 通常の予算保存と削除を別APIにし、空欄を削除へ暗黙変換しない。未来月はすべての月次・予算APIで拒否する。
+
+`PUT /api/months/:month/budgets`は`{ "budgets": [{ "categoryId": "...", "amount": 0 }] }`を受け取る。配列は1件以上とし、費目IDの重複、無効な金額、利用できない費目を拒否する。成功時は`200`で`budget-draft`と同じ形式の対象月の確定済み状態を返す。送信しなかった費目は変更しない。`DELETE`は対象月にその費目の予算行がある場合に`204`を返し、行がない場合や他家計の費目は同じ`404`を返す。家計行ロックを3秒で取得できなければ、再試行可能な`BUDGET_LOCK_CONFLICT`を`409`で返す。

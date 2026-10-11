@@ -11,6 +11,7 @@ export default defineConfig({
 	plugins: [react()],
 	test: {
 		environment: "node",
+		maxWorkers: 4,
 		include: ["src/**/*.test.{ts,tsx}"],
 		setupFiles: ["./src/react-app/test/setup.ts"],
 	},
