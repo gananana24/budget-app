@@ -114,6 +114,8 @@ task db:dump
 
 このアプリはCloudflare Workersの静的アセットと同一オリジンの`/api`、Clerkの本番インスタンス、Neon PostgreSQL、Cloudflare Hyperdriveを使います。以下は新しい環境で再現する順序です。CloudflareとClerkの本番設定には所有するドメインを使います。
 
+Cloudflare Worker自体は`<worker名>.<アカウントのサブドメイン>.workers.dev`で公開できます。ただし、[Clerkの本番インスタンスには所有するドメインとDNSレコードが必要](https://clerk.com/docs/guides/development/deployment/production)です。`workers.dev`だけを使う場合、この節のClerk本番設定と本番Googleログインの受け入れ条件は完了できません。Clerkの開発インスタンスを使った公開は検証用に限り、家計データを扱う本番運用として扱いません。
+
 1. [Clerkの本番インスタンス](https://clerk.com/docs/guides/development/deployment/production)を作成し、本番ドメインとClerkが示すDNSレコードを設定します。[Google接続](https://clerk.com/docs/guides/configure/auth-strategies/social-connections/google)に本番用OAuthクライアントID・シークレットを登録し、Google以外のログイン方式を無効にします。Google側の公開状態と許可済みリダイレクトURIも確認します。Clerk本番の`pk_live_...`と`sk_live_...`を取得します。
 2. Neonで本番用PostgreSQLデータベースを用意します。Neonの接続情報から、マイグレーション用の**直接接続**URLを安全な保管場所に置きます。`db/migrations/`は本番DBへ明示的に適用します。zshでは次のように一時的に読み込み、適用状態を確認します。入力時のURLは画面にもシェル履歴にも表示されません。`task db:migrate`はローカルDB専用です。
 
@@ -127,7 +129,7 @@ task db:dump
    ```
 3. Cloudflare DashboardでNeonへのHyperdrive接続を作成し、クエリキャッシュを無効にします。`wrangler.json`の`hyperdrive[0].id`をその接続IDに置き換え、binding名`DATABASE`を維持します。現行のIDは別環境で作られた接続を指すため、新しいCloudflareアカウントではそのまま使えません。HyperdriveにはNeonの接続情報をCloudflare側で登録し、DB接続文字列をソースへ置きません。
 4. Cloudflareの対象アカウントへWranglerでログインし、`pnpm exec wrangler whoami`で対象を確認します。Git管理対象外の`.env.production.secrets`を`touch .env.production.secrets && chmod 600 .env.production.secrets`で作成し、`CLERK_PUBLISHABLE_KEY=pk_live_...`と`CLERK_SECRET_KEY=sk_live_...`を保存します。このファイルはWorkerへの登録にだけ使い、Viteのビルドには読み込ませません。`CLERK_SECRET_KEY`を`VITE_`付き変数、`wrangler.json`の`vars`、通常ログへ入れません。
-5. ビルド環境にClerk本番の公開キーを`VITE_CLERK_PUBLISHABLE_KEY`として設定します。ローカルからデプロイする場合は、Git管理対象外の`.env.production.local`に`VITE_CLERK_PUBLISHABLE_KEY=pk_live_...`を保存できます。`pnpm check`を実行し、`pnpm build`後に次の検査コマンドが何も出力しないことを確認します。初回デプロイは`pnpm exec wrangler deploy --secrets-file .env.production.secrets`でWorkerとsecretを同時に作成し、`pnpm exec wrangler secret list`で名前を確認します。その後、Cloudflareの本番ドメインをWorkerに割り当てます。CIを使う場合も、ビルド時の公開キーとWorkerの2つのsecretをそれぞれの工程へ設定します。
+5. ビルド環境にClerk本番の公開キーを`VITE_CLERK_PUBLISHABLE_KEY`として設定します。ローカルからデプロイする場合は、Git管理対象外の`.env.production.local`に`VITE_CLERK_PUBLISHABLE_KEY=pk_live_...`を保存できます。`pnpm check`を実行し、`pnpm build`後に次の検査コマンドが何も出力しないことを確認します。初回デプロイは`pnpm exec wrangler deploy --secrets-file .env.production.secrets`でWorkerとsecretを同時に作成し、`pnpm exec wrangler secret list`で名前を確認します。その後、所有する本番ドメインをWorkerに割り当てます。CIを使う場合も、ビルド時の公開キーとWorkerの2つのsecretをそれぞれの工程へ設定します。
 
    ```bash
    rg -l 'sk_live_|postgres(ql)?://' dist/client
