@@ -126,14 +126,14 @@ task db:dump
    unset DATABASE_URL
    ```
 3. Cloudflare DashboardでNeonへのHyperdrive接続を作成し、クエリキャッシュを無効にします。`wrangler.json`の`hyperdrive[0].id`をその接続IDに置き換え、binding名`DATABASE`を維持します。現行のIDは別環境で作られた接続を指すため、新しいCloudflareアカウントではそのまま使えません。HyperdriveにはNeonの接続情報をCloudflare側で登録し、DB接続文字列をソースへ置きません。
-4. Cloudflareの対象アカウントへWranglerでログインし、`pnpm exec wrangler whoami`で対象を確認します。`pnpm exec wrangler secret put CLERK_PUBLISHABLE_KEY`と`pnpm exec wrangler secret put CLERK_SECRET_KEY`を対話入力で実行し、Clerk本番キーを登録します。`pnpm exec wrangler secret list`で名前を確認します。`CLERK_SECRET_KEY`を`VITE_`付き変数、`wrangler.json`の`vars`、通常ログへ入れません。
-5. ビルド環境にClerk本番の公開キーを`VITE_CLERK_PUBLISHABLE_KEY`として設定します。ローカルからデプロイする場合は、Git管理対象外の`.env.production.local`に`VITE_CLERK_PUBLISHABLE_KEY=pk_live_...`を保存できます。`pnpm check`を実行し、`pnpm build`後に次のコマンドが何も出力しないことを確認します。最後に`pnpm deploy`を実行し、Cloudflareの本番ドメインをWorkerに割り当てます。CIを使う場合も、ビルド時の公開キーとWorkerの2つのsecretをそれぞれの工程へ設定します。
+4. Cloudflareの対象アカウントへWranglerでログインし、`pnpm exec wrangler whoami`で対象を確認します。Git管理対象外の`.env.production.secrets`を`touch .env.production.secrets && chmod 600 .env.production.secrets`で作成し、`CLERK_PUBLISHABLE_KEY=pk_live_...`と`CLERK_SECRET_KEY=sk_live_...`を保存します。このファイルはWorkerへの登録にだけ使い、Viteのビルドには読み込ませません。`CLERK_SECRET_KEY`を`VITE_`付き変数、`wrangler.json`の`vars`、通常ログへ入れません。
+5. ビルド環境にClerk本番の公開キーを`VITE_CLERK_PUBLISHABLE_KEY`として設定します。ローカルからデプロイする場合は、Git管理対象外の`.env.production.local`に`VITE_CLERK_PUBLISHABLE_KEY=pk_live_...`を保存できます。`pnpm check`を実行し、`pnpm build`後に次の検査コマンドが何も出力しないことを確認します。初回デプロイは`pnpm exec wrangler deploy --secrets-file .env.production.secrets`でWorkerとsecretを同時に作成し、`pnpm exec wrangler secret list`で名前を確認します。その後、Cloudflareの本番ドメインをWorkerに割り当てます。CIを使う場合も、ビルド時の公開キーとWorkerの2つのsecretをそれぞれの工程へ設定します。
 
    ```bash
    rg -l 'sk_live_|postgres(ql)?://' dist/client
    ```
 
-`wrangler secret put`は即時にWorkerの新しいバージョンをデプロイします。既存公開環境でキーを変更するときは、先に対象環境と変更タイミングを確認してください。`wrangler.json`のHyperdrive IDやドメインを別環境へ合わせて変更した場合は、`pnpm cf-typegen`でbinding型を再生成します。
+初回デプロイ後は`pnpm deploy`でコードを更新できます。`wrangler secret put`は即時にWorkerの新しいバージョンをデプロイするため、既存公開環境でキーを変更するときは対象環境と変更タイミングを先に確認してください。`wrangler.json`のHyperdrive IDやドメインを別環境へ合わせて変更した場合は、`pnpm cf-typegen`でbinding型を再生成します。
 
 ### 公開後の確認
 
