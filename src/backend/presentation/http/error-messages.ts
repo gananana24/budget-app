@@ -3,7 +3,6 @@ export const errorMessages = {
 	BOOTSTRAP_REQUIRED: "家計簿の準備が完了していません。",
 	VALIDATION_ERROR: "入力内容を確認してください。",
 	CATEGORY_NAME_CONFLICT: "同じ名前のカテゴリーがすでにあります。",
-	BUDGET_LOCK_CONFLICT: "予算の更新が重なりました。もう一度お試しください。",
 	NOT_FOUND: "指定された情報が見つかりませんでした。",
 	INTERNAL_ERROR: "処理を完了できませんでした。しばらくしてから、もう一度お試しください。",
 } as const

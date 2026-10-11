@@ -8,7 +8,6 @@ import { DefaultCreateCategoryUseCase } from "../../../usecase/category/create-c
 import { DefaultDeleteCategoryUseCase } from "../../../usecase/category/delete-category-use-case"
 import { DefaultListCategoriesUseCase } from "../../../usecase/category/list-categories-use-case"
 import { DefaultUpdateCategoryUseCase } from "../../../usecase/category/update-category-use-case"
-import { PostgresBudgetPeriodRepository } from "../budget/postgres-budget-period-repository"
 import { withPostgresTransaction } from "../database"
 import { PostgresHouseholdMembershipRepository } from "../household/postgres-household-membership-repository"
 import { PostgresHouseholdRepository } from "../household/postgres-household-repository"
@@ -27,8 +26,6 @@ async function bootstrap(clerkUserId: string) {
 			userRepository: new PostgresUserRepository(client),
 			householdRepository: new PostgresHouseholdRepository(client),
 			householdMembershipRepository: new PostgresHouseholdMembershipRepository(client),
-			budgetPeriodRepository: new PostgresBudgetPeriodRepository(client),
-			now: () => new Date("2026-10-05T00:00:00.000Z"),
 		}).execute(ClerkUserId.from(clerkUserId)),
 	)
 }
@@ -181,7 +178,7 @@ describe("category management with PostgreSQL", () => {
 		).toBe(true)
 	})
 
-	it("keeps expenses and period totals while removing all budgets for a deleted category", async () => {
+	it("keeps expenses as uncategorized after deleting a category", async () => {
 		// Arrange
 		const owner = await bootstrap("clerk_category_delete_flow")
 		const category = await withPostgresTransaction(DATABASE_URL, (client) =>
@@ -190,14 +187,6 @@ describe("category management with PostgreSQL", () => {
 				name: "ペット",
 				iconName: "paw-print",
 			}),
-		)
-		await inspector.query(
-			"INSERT INTO public.budget_periods (household_id, month_start) VALUES ($1, '2026-09-01'), ($1, '2026-10-01') ON CONFLICT DO NOTHING",
-			[owner.householdId.value],
-		)
-		await inspector.query(
-			"INSERT INTO public.monthly_budgets (household_id, month_start, category_id, amount) VALUES ($1, '2026-09-01', $2, 1000), ($1, '2026-10-01', $2, 2000)",
-			[owner.householdId.value, category.id],
 		)
 		await inspector.query(
 			"INSERT INTO public.expenses (household_id, category_id, expense_date, amount) VALUES ($1, $2, '2026-10-03', 500)",
@@ -216,16 +205,12 @@ describe("category management with PostgreSQL", () => {
 		const result = await inspector.query(
 			`SELECT
 		  (SELECT count(*)::int FROM public.expenses WHERE household_id = $1 AND category_id IS NULL) AS uncategorized_count,
-		  (SELECT sum(amount)::int FROM public.expenses WHERE household_id = $1) AS expense_total,
-		  (SELECT count(*)::int FROM public.monthly_budgets WHERE household_id = $1) AS budget_count,
-		  (SELECT count(*)::int FROM public.budget_periods WHERE household_id = $1) AS period_count`,
+		  (SELECT sum(amount)::int FROM public.expenses WHERE household_id = $1) AS expense_total`,
 			[owner.householdId.value],
 		)
 		expect(result.rows[0]).toEqual({
 			uncategorized_count: 1,
 			expense_total: 500,
-			budget_count: 0,
-			period_count: 2,
 		})
 	})
 })

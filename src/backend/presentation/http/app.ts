@@ -1,9 +1,6 @@
 import { Hono, type MiddlewareHandler } from "hono"
 import type { ResolveAuthorizationUseCase } from "../../usecase/authorization/resolve-authorization-use-case"
 import type { BootstrapUseCase } from "../../usecase/bootstrap/bootstrap-use-case"
-import type { DeleteMonthlyBudgetUseCase } from "../../usecase/budget/delete-monthly-budget-use-case"
-import type { GetBudgetDraftUseCase } from "../../usecase/budget/get-budget-draft-use-case"
-import type { SaveMonthlyBudgetsUseCase } from "../../usecase/budget/save-monthly-budgets-use-case"
 import type { CreateCategoryUseCase } from "../../usecase/category/create-category-use-case"
 import type { DeleteCategoryUseCase } from "../../usecase/category/delete-category-use-case"
 import type { ListCategoriesUseCase } from "../../usecase/category/list-categories-use-case"
@@ -14,7 +11,6 @@ import type { UpdateExpenseUseCase } from "../../usecase/expense/update-expense-
 import type { GetMonthlyOverviewUseCase } from "../../usecase/monthly/get-monthly-overview-use-case"
 import type { HttpEnvironment } from "./authentication"
 import { BootstrapApiRouteHandler } from "./bootstrap/handlers/bootstrap-api-route-handler"
-import { BudgetApiRouteHandler } from "./budget/handlers/budget-api-route-handler"
 import { CategoryApiRouteHandler } from "./category/handlers/category-api-route-handler"
 import { domainErrorResponse, notFoundResponse, unexpectedErrorResponse } from "./error-response"
 import { ChangeExpenseApiRouteHandler } from "./expense/handlers/change-expense-api-route-handler"
@@ -36,9 +32,6 @@ type HttpAppDependencies = Readonly<{
 	createCategoryUseCase: CreateCategoryUseCase
 	updateCategoryUseCase: UpdateCategoryUseCase
 	deleteCategoryUseCase: DeleteCategoryUseCase
-	getBudgetDraftUseCase: GetBudgetDraftUseCase
-	saveMonthlyBudgetsUseCase: SaveMonthlyBudgetsUseCase
-	deleteMonthlyBudgetUseCase: DeleteMonthlyBudgetUseCase
 }>
 
 export function createHttpApp({
@@ -53,41 +46,44 @@ export function createHttpApp({
 	createCategoryUseCase,
 	updateCategoryUseCase,
 	deleteCategoryUseCase,
-	getBudgetDraftUseCase,
-	saveMonthlyBudgetsUseCase,
-	deleteMonthlyBudgetUseCase,
-}: HttpAppDependencies): Hono<HttpEnvironment> {
+}: HttpAppDependencies) {
 	const app = new Hono<HttpEnvironment>()
 
 	app.use("/api/*", ...authenticationMiddleware)
-	new BootstrapApiRouteHandler(bootstrapUseCase).registerRoutes(app)
-	new CreateExpenseApiRouteHandler(
-		resolveAuthorizationUseCase,
-		createExpenseUseCase,
-	).registerRoutes(app)
-	new ChangeExpenseApiRouteHandler(
-		resolveAuthorizationUseCase,
-		updateExpenseUseCase,
-		deleteExpenseUseCase,
-	).registerRoutes(app)
-	new GetMonthlyOverviewApiRouteHandler(
-		resolveAuthorizationUseCase,
-		getMonthlyOverviewUseCase,
-	).registerRoutes(app)
-	new CategoryApiRouteHandler(
-		resolveAuthorizationUseCase,
-		listCategoriesUseCase,
-		createCategoryUseCase,
-		updateCategoryUseCase,
-		deleteCategoryUseCase,
-	).registerRoutes(app)
-	new BudgetApiRouteHandler(
-		resolveAuthorizationUseCase,
-		getBudgetDraftUseCase,
-		saveMonthlyBudgetsUseCase,
-		deleteMonthlyBudgetUseCase,
-	).registerRoutes(app)
-
+	const routes = app
+		.route("/", new BootstrapApiRouteHandler(bootstrapUseCase).registerRoutes())
+		.route(
+			"/",
+			new CreateExpenseApiRouteHandler(
+				resolveAuthorizationUseCase,
+				createExpenseUseCase,
+			).registerRoutes(),
+		)
+		.route(
+			"/",
+			new ChangeExpenseApiRouteHandler(
+				resolveAuthorizationUseCase,
+				updateExpenseUseCase,
+				deleteExpenseUseCase,
+			).registerRoutes(),
+		)
+		.route(
+			"/",
+			new GetMonthlyOverviewApiRouteHandler(
+				resolveAuthorizationUseCase,
+				getMonthlyOverviewUseCase,
+			).registerRoutes(),
+		)
+		.route(
+			"/",
+			new CategoryApiRouteHandler(
+				resolveAuthorizationUseCase,
+				listCategoriesUseCase,
+				createCategoryUseCase,
+				updateCategoryUseCase,
+				deleteCategoryUseCase,
+			).registerRoutes(),
+		)
 	app.notFound(notFoundResponse)
 	app.onError((error, context) => {
 		const domainResponse = domainErrorResponse(error, context)
@@ -98,5 +94,7 @@ export function createHttpApp({
 		return unexpectedErrorResponse(error, context)
 	})
 
-	return app
+	return routes
 }
+
+export type AppType = ReturnType<typeof createHttpApp>

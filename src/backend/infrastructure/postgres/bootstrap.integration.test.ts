@@ -4,7 +4,6 @@ import { User } from "../../domain/user/entities/user"
 import { ClerkUserId } from "../../domain/user/value-objects/clerk-user-id"
 import { DefaultResolveAuthorizationUseCase } from "../../usecase/authorization/resolve-authorization-use-case"
 import { DefaultBootstrapUseCase } from "../../usecase/bootstrap/bootstrap-use-case"
-import { PostgresBudgetPeriodRepository } from "./budget/postgres-budget-period-repository"
 import { withPostgresClient, withPostgresTransaction } from "./database"
 import { PostgresHouseholdMembershipRepository } from "./household/postgres-household-membership-repository"
 import { PostgresHouseholdRepository } from "./household/postgres-household-repository"
@@ -21,14 +20,12 @@ function requireDedicatedTestDatabase(connectionString: string): void {
 	}
 }
 
-async function bootstrap(clerkUserId: string, instant: Date) {
+async function bootstrap(clerkUserId: string, _instant: Date) {
 	const authorization = await withPostgresTransaction(TEST_DATABASE_URL, (client) =>
 		new DefaultBootstrapUseCase({
 			userRepository: new PostgresUserRepository(client),
 			householdRepository: new PostgresHouseholdRepository(client),
 			householdMembershipRepository: new PostgresHouseholdMembershipRepository(client),
-			budgetPeriodRepository: new PostgresBudgetPeriodRepository(client),
-			now: () => instant,
 		}).execute(ClerkUserId.from(clerkUserId)),
 	)
 
@@ -112,10 +109,8 @@ describe("bootstrap with PostgreSQL", () => {
 
 	it("creates the personal household state once for a first-time user", async () => {
 		// Arrange
-		const instant = new Date("2026-08-31T15:00:00.000Z")
-
 		// Act
-		const authorization = await bootstrap("clerk_first_user", instant)
+		const authorization = await bootstrap("clerk_first_user", new Date("2026-08-31T15:00:00.000Z"))
 
 		// Assert
 		const state = await inspectionClient.query(
@@ -123,9 +118,7 @@ describe("bootstrap with PostgreSQL", () => {
 			  (SELECT count(*)::int FROM public.users) AS users,
 			  (SELECT count(*)::int FROM public.households) AS households,
 			  (SELECT count(*)::int FROM public.household_members) AS memberships,
-			  (SELECT count(*)::int FROM public.categories) AS categories,
-			  (SELECT count(*)::int FROM public.budget_periods) AS periods,
-			  (SELECT min(month_start)::text FROM public.budget_periods) AS month`,
+			  (SELECT count(*)::int FROM public.categories) AS categories`,
 		)
 		expect(authorization.userId).toMatch(/^[0-9a-f-]{36}$/)
 		expect(authorization.householdId).toMatch(/^[0-9a-f-]{36}$/)
@@ -134,12 +127,10 @@ describe("bootstrap with PostgreSQL", () => {
 			households: 1,
 			memberships: 1,
 			categories: 9,
-			periods: 1,
-			month: "2026-09-01",
 		})
 	})
 
-	it("keeps the same household and first budget period across later retries", async () => {
+	it("keeps the same household across later retries", async () => {
 		// Arrange
 		const firstAuthorization = await bootstrap(
 			"clerk_retry_user",
@@ -153,11 +144,7 @@ describe("bootstrap with PostgreSQL", () => {
 		)
 
 		// Assert
-		const periods = await inspectionClient.query(
-			"SELECT month_start::text AS month FROM public.budget_periods",
-		)
 		expect(retriedAuthorization).toEqual(firstAuthorization)
-		expect(periods.rows).toEqual([{ month: "2026-09-01" }])
 	})
 
 	it("does not duplicate state when the same user starts concurrently", async () => {
@@ -174,8 +161,7 @@ describe("bootstrap with PostgreSQL", () => {
 			  (SELECT count(*)::int FROM public.users) AS users,
 			  (SELECT count(*)::int FROM public.households) AS households,
 			  (SELECT count(*)::int FROM public.household_members) AS memberships,
-			  (SELECT count(*)::int FROM public.categories) AS categories,
-			  (SELECT count(*)::int FROM public.budget_periods) AS periods`,
+			  (SELECT count(*)::int FROM public.categories) AS categories`,
 		)
 		expect(new Set(authorizations.map(({ userId }) => userId)).size).toBe(1)
 		expect(new Set(authorizations.map(({ householdId }) => householdId)).size).toBe(1)
@@ -184,26 +170,7 @@ describe("bootstrap with PostgreSQL", () => {
 			households: 1,
 			memberships: 1,
 			categories: 9,
-			periods: 1,
 		})
-	})
-
-	it("creates only one first budget period across concurrent month-boundary requests", async () => {
-		// Arrange
-		const attempts = [
-			bootstrap("clerk_month_boundary", new Date("2026-09-30T14:59:59.999Z")),
-			bootstrap("clerk_month_boundary", new Date("2026-09-30T15:00:00.000Z")),
-		]
-
-		// Act
-		await Promise.all(attempts)
-
-		// Assert
-		const periods = await inspectionClient.query(
-			"SELECT month_start::text AS month FROM public.budget_periods",
-		)
-		expect(periods.rows).toHaveLength(1)
-		expect(["2026-09-01", "2026-10-01"]).toContain(periods.rows[0].month)
 	})
 
 	it("does not create or modify shared initial categories", async () => {
@@ -274,7 +241,7 @@ describe("bootstrap with PostgreSQL", () => {
 		expect(expenses.rows[0]).toEqual({ count: 2 })
 	})
 
-	it("rejects another household's custom category from expenses and budgets", async () => {
+	it("rejects another household's custom category on expenses", async () => {
 		// Arrange
 		const [owner, other] = await Promise.all([
 			bootstrap("clerk_custom_category_owner", new Date("2026-09-27T00:00:00.000Z")),
@@ -294,16 +261,10 @@ describe("bootstrap with PostgreSQL", () => {
 				 VALUES ($1, $2, '2026-09-20', 1000)`,
 				[other.householdId, category.rows[0].id],
 			),
-			inspectionClient.query(
-				`INSERT INTO public.monthly_budgets (household_id, month_start, category_id, amount)
-				 VALUES ($1, '2026-09-01', $2, 10000)`,
-				[other.householdId, category.rows[0].id],
-			),
 		])
 
 		// Assert
 		expect(results).toEqual([
-			{ status: "rejected", reason: expect.objectContaining({ code: "23503" }) },
 			{ status: "rejected", reason: expect.objectContaining({ code: "23503" }) },
 		])
 	})
@@ -398,7 +359,7 @@ describe("bootstrap with PostgreSQL", () => {
 		await expect(resolve).rejects.toMatchObject({ name: "BootstrapRequiredError" })
 	})
 
-	it("keeps expenses as uncategorized and removes budgets when a custom category is deleted", async () => {
+	it("keeps expenses as uncategorized when a custom category is deleted", async () => {
 		// Arrange
 		const authorization = await bootstrap(
 			"clerk_category_delete",
@@ -416,11 +377,6 @@ describe("bootstrap with PostgreSQL", () => {
 			 VALUES ($1, $2, '2026-09-20', 50000)`,
 			[authorization.householdId, categoryId],
 		)
-		await inspectionClient.query(
-			`INSERT INTO public.monthly_budgets (household_id, month_start, category_id, amount)
-			 VALUES ($1, '2026-09-01', $2, 60000)`,
-			[authorization.householdId, categoryId],
-		)
 
 		// Act
 		await inspectionClient.query(
@@ -430,11 +386,8 @@ describe("bootstrap with PostgreSQL", () => {
 
 		// Assert
 		const state = await inspectionClient.query(
-			`SELECT
-			  (SELECT category_id FROM public.expenses LIMIT 1) AS "expenseCategoryId",
-			  (SELECT count(*)::int FROM public.monthly_budgets) AS budgets,
-			  (SELECT count(*)::int FROM public.budget_periods) AS periods`,
+			`SELECT (SELECT category_id FROM public.expenses LIMIT 1) AS "expenseCategoryId"`,
 		)
-		expect(state.rows[0]).toEqual({ expenseCategoryId: null, budgets: 0, periods: 1 })
+		expect(state.rows[0]).toEqual({ expenseCategoryId: null })
 	})
 })

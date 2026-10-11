@@ -1,5 +1,4 @@
 import type { Client } from "pg"
-import type { MonthStart } from "../../../domain/budget/value-objects/month-start"
 import type { HouseholdId } from "../../../domain/household/value-objects/household-id"
 import type {
 	MonthlyCategoryRecord,
@@ -7,19 +6,15 @@ import type {
 	MonthlyOverviewRecord,
 	MonthlyOverviewRepository,
 } from "../../../domain/monthly/repositories/monthly-overview-repository"
+import type { MonthStart } from "../../../domain/monthly/value-objects/month-start"
 
 const CATEGORY_SQL = `
 SELECT
   categories.id::text AS id,
   categories.name,
   categories.icon_name,
-  monthly_budgets.amount AS budget_amount,
   COALESCE(SUM(expenses.amount), 0)::text AS expense_amount
 FROM public.categories
-LEFT JOIN public.monthly_budgets
-  ON monthly_budgets.household_id = $1::uuid
-  AND monthly_budgets.category_id = categories.id
-  AND monthly_budgets.month_start = $2::date
 LEFT JOIN public.expenses
   ON expenses.household_id = $1::uuid
   AND expenses.category_id = categories.id
@@ -33,8 +28,7 @@ GROUP BY
   categories.icon_name,
   categories.household_id,
   categories.seed_key,
-  categories.created_at,
-  monthly_budgets.amount
+  categories.created_at
 ORDER BY
   CASE categories.seed_key
     WHEN 'food' THEN 1
@@ -70,18 +64,6 @@ ORDER BY expense_date DESC, created_at DESC, id DESC
 
 const TOTALS_SQL = `
 SELECT
-  EXISTS (
-    SELECT 1
-    FROM public.budget_periods
-    WHERE household_id = $1::uuid
-      AND month_start = $2::date
-  ) AS initialized,
-  COALESCE((
-    SELECT SUM(amount)
-    FROM public.monthly_budgets
-    WHERE household_id = $1::uuid
-      AND month_start = $2::date
-  ), 0)::text AS total_budget_amount,
   COALESCE((
     SELECT SUM(amount)
     FROM public.expenses
@@ -128,8 +110,6 @@ function readCategory(value: unknown): MonthlyCategoryRecord {
 		id: row.id,
 		name: row.name,
 		iconName: row.icon_name,
-		budgetAmount:
-			row.budget_amount === null ? null : readSafeInteger(row.budget_amount, "category budget"),
 		expenseAmount: readSafeInteger(row.expense_amount, "category expenses"),
 	}
 }
@@ -172,13 +152,7 @@ export class PostgresMonthlyOverviewRepository implements MonthlyOverviewReposit
 		const expenseResult = await this.client.query(EXPENSE_SQL, parameters)
 		const totalsResult = await this.client.query(TOTALS_SQL, parameters)
 		const totals = readRecord(totalsResult.rows[0], "Totals query returned an invalid row")
-		if (typeof totals.initialized !== "boolean") {
-			throw new Error("Totals query returned an invalid initialized field")
-		}
-
 		return {
-			initialized: totals.initialized,
-			totalBudgetAmount: readSafeInteger(totals.total_budget_amount, "total budget"),
 			totalExpenseAmount: readSafeInteger(totals.total_expense_amount, "total expenses"),
 			uncategorizedExpenseAmount: readSafeInteger(
 				totals.uncategorized_expense_amount,

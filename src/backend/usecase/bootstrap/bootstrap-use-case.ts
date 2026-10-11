@@ -1,6 +1,3 @@
-import { BudgetPeriod } from "../../domain/budget/entities/budget-period"
-import type { BudgetPeriodRepository } from "../../domain/budget/repositories/budget-period-repository"
-import { MonthStart } from "../../domain/budget/value-objects/month-start"
 import { Household } from "../../domain/household/entities/household"
 import { HouseholdMembership } from "../../domain/household/entities/household-membership"
 import type { HouseholdMembershipRepository } from "../../domain/household/repositories/household-membership-repository"
@@ -18,8 +15,6 @@ type BootstrapUseCaseDependencies = Readonly<{
 	userRepository: UserRepository
 	householdRepository: HouseholdRepository
 	householdMembershipRepository: HouseholdMembershipRepository
-	budgetPeriodRepository: BudgetPeriodRepository
-	now: () => Date
 }>
 
 export class DefaultBootstrapUseCase implements BootstrapUseCase {
@@ -29,19 +24,9 @@ export class DefaultBootstrapUseCase implements BootstrapUseCase {
 		const user = await this.findOrCreateUser(clerkUserId)
 		const household = await this.findOrCreatePersonalHousehold(user)
 
-		await this.dependencies.householdRepository.lock(household.id)
 		await this.dependencies.householdMembershipRepository.save(
 			new HouseholdMembership(household.id, user.id),
 		)
-
-		const hasBudgetPeriod = await this.dependencies.budgetPeriodRepository.existsForHousehold(
-			household.id,
-		)
-		if (!hasBudgetPeriod) {
-			await this.dependencies.budgetPeriodRepository.save(
-				new BudgetPeriod(household.id, MonthStart.fromInstantInTokyo(this.dependencies.now())),
-			)
-		}
 
 		return new AuthorizationContext(user.id, household.id)
 	}

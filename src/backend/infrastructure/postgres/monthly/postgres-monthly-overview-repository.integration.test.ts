@@ -3,7 +3,6 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { ClerkUserId } from "../../../domain/user/value-objects/clerk-user-id"
 import { DefaultBootstrapUseCase } from "../../../usecase/bootstrap/bootstrap-use-case"
 import { DefaultGetMonthlyOverviewUseCase } from "../../../usecase/monthly/get-monthly-overview-use-case"
-import { PostgresBudgetPeriodRepository } from "../budget/postgres-budget-period-repository"
 import { withPostgresReadTransaction, withPostgresTransaction } from "../database"
 import { PostgresHouseholdMembershipRepository } from "../household/postgres-household-membership-repository"
 import { PostgresHouseholdRepository } from "../household/postgres-household-repository"
@@ -27,8 +26,6 @@ async function bootstrap(clerkUserId: string) {
 			userRepository: new PostgresUserRepository(client),
 			householdRepository: new PostgresHouseholdRepository(client),
 			householdMembershipRepository: new PostgresHouseholdMembershipRepository(client),
-			budgetPeriodRepository: new PostgresBudgetPeriodRepository(client),
-			now: () => new Date("2026-09-15T00:00:00.000Z"),
 		}).execute(ClerkUserId.from(clerkUserId)),
 	)
 }
@@ -65,7 +62,7 @@ describe("monthly overview with PostgreSQL", () => {
 		await inspectionClient.end()
 	})
 
-	it("returns ordered expenses and isolated aggregates with distinct budget states", async () => {
+	it("returns ordered expenses and isolated category totals", async () => {
 		// Arrange
 		const [authorization, otherAuthorization] = await Promise.all([
 			bootstrap("clerk_monthly_owner"),
@@ -75,9 +72,9 @@ describe("monthly overview with PostgreSQL", () => {
 			"SELECT id FROM public.categories WHERE seed_key = 'food'",
 		)
 		const foodCategoryId = foodCategory.rows[0].id
-		const customCategory = await inspectionClient.query(
+		await inspectionClient.query(
 			`INSERT INTO public.categories (household_id, name, created_at)
-			 VALUES ($1, '予備費', '2026-09-01T00:00:00.000Z')
+			 VALUES ($1, 'ペット', '2026-09-01T00:00:00.000Z')
 			 RETURNING id`,
 			[authorization.householdId.value],
 		)
@@ -85,19 +82,6 @@ describe("monthly overview with PostgreSQL", () => {
 			`INSERT INTO public.categories (household_id, name)
 			 VALUES ($1, '他家計専用')`,
 			[otherAuthorization.householdId.value],
-		)
-		await inspectionClient.query(
-			`INSERT INTO public.monthly_budgets (household_id, month_start, category_id, amount)
-			 VALUES
-			   ($1, '2026-09-01', $2, 1000),
-			   ($1, '2026-09-01', $3, 0),
-			   ($4, '2026-09-01', $2, 20000)`,
-			[
-				authorization.householdId.value,
-				foodCategoryId,
-				customCategory.rows[0].id,
-				otherAuthorization.householdId.value,
-			],
 		)
 		await inspectionClient.query(
 			`INSERT INTO public.expenses
@@ -120,27 +104,21 @@ describe("monthly overview with PostgreSQL", () => {
 		const result = await getMonthlyOverview(authorization, "2026-09-01")
 
 		// Assert
-		expect(result.initialized).toBe(true)
-		expect(result.totals).toEqual({ budget: 1_000, expenses: 1_400, remaining: -400 })
+		expect(result.totals).toEqual({ expenses: 1_400 })
 		expect(result.uncategorized).toEqual({ expenses: 500 })
 		expect(result.categories).toHaveLength(10)
 		expect(result.categories[0]).toMatchObject({
 			name: "食費",
 			iconName: "utensils",
-			budget: { status: "set", amount: 1_000 },
 			expenses: 900,
-			remaining: 100,
 		})
 		expect(result.categories.at(-1)).toMatchObject({
-			name: "予備費",
+			name: "ペット",
 			iconName: "tag",
-			budget: { status: "set", amount: 0 },
 			expenses: 0,
-			remaining: 0,
 		})
 		expect(result.categories.find(({ name }) => name === "日用品")).toMatchObject({
-			budget: { status: "unset" },
-			remaining: null,
+			expenses: 0,
 		})
 		expect(result.categories.some(({ name }) => name === "他家計専用")).toBe(false)
 		expect(result.expenses.map(({ id }) => id)).toEqual([
@@ -152,24 +130,14 @@ describe("monthly overview with PostgreSQL", () => {
 		expect(result.expenses[0].categoryId).toBeNull()
 	})
 
-	it("does not initialize a budget period when reading an earlier month", async () => {
+	it("returns an empty overview when reading an earlier month", async () => {
 		// Arrange
 		const authorization = await bootstrap("clerk_monthly_past")
-		const periodsBefore = await inspectionClient.query(
-			"SELECT month_start::text AS month FROM public.budget_periods WHERE household_id = $1",
-			[authorization.householdId.value],
-		)
-
 		// Act
 		const result = await getMonthlyOverview(authorization, "2026-08-01")
 
 		// Assert
-		const periodsAfter = await inspectionClient.query(
-			"SELECT month_start::text AS month FROM public.budget_periods WHERE household_id = $1",
-			[authorization.householdId.value],
-		)
-		expect(result.initialized).toBe(false)
-		expect(result.categories.every(({ budget }) => budget.status === "unset")).toBe(true)
-		expect(periodsAfter.rows).toEqual(periodsBefore.rows)
+		expect(result.totals).toEqual({ expenses: 0 })
+		expect(result.expenses).toEqual([])
 	})
 })

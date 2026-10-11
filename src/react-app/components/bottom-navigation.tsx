@@ -1,10 +1,10 @@
 import { Link } from "@tanstack/react-router"
-import { CircleDollarSign, Home, Settings, WalletCards } from "lucide-react"
+import { CircleDollarSign, Home, Settings } from "lucide-react"
 import type { ComponentType, SVGProps } from "react"
 import { messages } from "../i18n/messages"
 
 type NavigationItem = Readonly<{
-	to: "/" | "/expenses" | "/budget" | "/settings"
+	to: "/" | "/expenses" | "/settings"
 	label: string
 	icon: ComponentType<SVGProps<SVGSVGElement>>
 }>
@@ -12,7 +12,6 @@ type NavigationItem = Readonly<{
 const navigationItems: readonly NavigationItem[] = [
 	{ to: "/", label: messages.navigation.home(), icon: Home },
 	{ to: "/expenses", label: messages.navigation.expenses(), icon: CircleDollarSign },
-	{ to: "/budget", label: messages.navigation.budget(), icon: WalletCards },
 	{ to: "/settings", label: messages.navigation.settings(), icon: Settings },
 ]
 
@@ -22,7 +21,7 @@ export function BottomNavigation() {
 			className="bottom-navigation app-divider fixed inset-x-0 bottom-0 z-10 border-t bg-white"
 			aria-label={messages.navigation.label()}
 		>
-			<ul className="mx-auto grid max-w-md grid-cols-4 px-2">
+			<ul className="mx-auto grid max-w-md grid-cols-3 px-2">
 				{navigationItems.map(({ to, label, icon: Icon }) => (
 					<li key={to}>
 						<Link

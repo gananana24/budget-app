@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest"
-import { MonthStart } from "../../domain/budget/value-objects/month-start"
 import { AuthorizationContext } from "../../domain/household/value-objects/authorization-context"
 import { HouseholdId } from "../../domain/household/value-objects/household-id"
 import type { MonthlyOverviewRepository } from "../../domain/monthly/repositories/monthly-overview-repository"
+import { MonthStart } from "../../domain/monthly/value-objects/month-start"
 import { InvalidValueError } from "../../domain/shared/exceptions/invalid-value-error"
 import { UserId } from "../../domain/user/value-objects/user-id"
 import { DefaultGetMonthlyOverviewUseCase } from "./get-monthly-overview-use-case"
@@ -17,14 +17,12 @@ function createAuthorization(): AuthorizationContext {
 function createRepository(): MonthlyOverviewRepository {
 	return {
 		findByMonth: async () => ({
-			initialized: true,
-			totalBudgetAmount: 1_000,
 			totalExpenseAmount: 1_300,
 			uncategorizedExpenseAmount: 500,
 			categories: [
-				{ id: "food", name: "食費", iconName: "utensils", budgetAmount: 1_000, expenseAmount: 800 },
-				{ id: "other", name: "その他", iconName: "ellipsis", budgetAmount: null, expenseAmount: 0 },
-				{ id: "zero", name: "予備費", iconName: "tag", budgetAmount: 0, expenseAmount: 0 },
+				{ id: "food", name: "食費", iconName: "utensils", expenseAmount: 800 },
+				{ id: "other", name: "その他", iconName: "ellipsis", expenseAmount: 0 },
+				{ id: "zero", name: "予備費", iconName: "tag", expenseAmount: 0 },
 			],
 			expenses: [],
 		}),
@@ -32,7 +30,7 @@ function createRepository(): MonthlyOverviewRepository {
 }
 
 describe("get monthly overview", () => {
-	it("calculates monthly and category balances while preserving budget states", async () => {
+	it("returns monthly and category expense totals", async () => {
 		// Arrange
 		const useCase = new DefaultGetMonthlyOverviewUseCase({
 			monthlyOverviewRepository: createRepository(),
@@ -48,33 +46,26 @@ describe("get monthly overview", () => {
 		// Assert
 		expect(result).toEqual({
 			month: "2026-09-01",
-			initialized: true,
-			totals: { budget: 1_000, expenses: 1_300, remaining: -300 },
+			totals: { expenses: 1_300 },
 			uncategorized: { expenses: 500 },
 			categories: [
 				{
 					id: "food",
 					name: "食費",
 					iconName: "utensils",
-					budget: { status: "set", amount: 1_000 },
 					expenses: 800,
-					remaining: 200,
 				},
 				{
 					id: "other",
 					name: "その他",
 					iconName: "ellipsis",
-					budget: { status: "unset" },
 					expenses: 0,
-					remaining: null,
 				},
 				{
 					id: "zero",
 					name: "予備費",
 					iconName: "tag",
-					budget: { status: "set", amount: 0 },
 					expenses: 0,
-					remaining: 0,
 				},
 			],
 			expenses: [],

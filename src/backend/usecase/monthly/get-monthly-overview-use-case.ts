@@ -1,19 +1,11 @@
-import { MonthStart } from "../../domain/budget/value-objects/month-start"
 import type { AuthorizationContext } from "../../domain/household/value-objects/authorization-context"
 import type { MonthlyOverviewRepository } from "../../domain/monthly/repositories/monthly-overview-repository"
+import { MonthStart } from "../../domain/monthly/value-objects/month-start"
 import { InvalidValueError } from "../../domain/shared/exceptions/invalid-value-error"
-
-type UnsetBudget = Readonly<{ status: "unset" }>
-type SetBudget = Readonly<{ status: "set"; amount: number }>
 
 export type MonthlyOverview = Readonly<{
 	month: string
-	initialized: boolean
-	totals: Readonly<{
-		budget: number
-		expenses: number
-		remaining: number
-	}>
+	totals: Readonly<{ expenses: number }>
 	uncategorized: Readonly<{
 		expenses: number
 	}>
@@ -21,9 +13,7 @@ export type MonthlyOverview = Readonly<{
 		id: string
 		name: string
 		iconName: string
-		budget: UnsetBudget | SetBudget
 		expenses: number
-		remaining: number | null
 	}>[]
 	expenses: readonly Readonly<{
 		id: string
@@ -50,14 +40,6 @@ type GetMonthlyOverviewUseCaseDependencies = Readonly<{
 	now: () => Date
 }>
 
-function subtractSafeIntegers(left: number, right: number): number {
-	const result = left - right
-	if (!Number.isSafeInteger(result)) {
-		throw new Error("Monthly aggregate exceeds the safe integer range")
-	}
-	return result
-}
-
 export class DefaultGetMonthlyOverviewUseCase implements GetMonthlyOverviewUseCase {
 	constructor(private readonly dependencies: GetMonthlyOverviewUseCaseDependencies) {}
 
@@ -75,26 +57,13 @@ export class DefaultGetMonthlyOverviewUseCase implements GetMonthlyOverviewUseCa
 
 		return {
 			month: month.value,
-			initialized: record.initialized,
-			totals: {
-				budget: record.totalBudgetAmount,
-				expenses: record.totalExpenseAmount,
-				remaining: subtractSafeIntegers(record.totalBudgetAmount, record.totalExpenseAmount),
-			},
+			totals: { expenses: record.totalExpenseAmount },
 			uncategorized: { expenses: record.uncategorizedExpenseAmount },
 			categories: record.categories.map((category) => ({
 				id: category.id,
 				name: category.name,
 				iconName: category.iconName,
-				budget:
-					category.budgetAmount === null
-						? { status: "unset" as const }
-						: { status: "set" as const, amount: category.budgetAmount },
 				expenses: category.expenseAmount,
-				remaining:
-					category.budgetAmount === null
-						? null
-						: subtractSafeIntegers(category.budgetAmount, category.expenseAmount),
 			})),
 			expenses: record.expenses,
 		}

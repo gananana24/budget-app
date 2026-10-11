@@ -2,7 +2,8 @@ import { queryOptions } from "@tanstack/react-query"
 import type { ApiClient } from "@/lib/api-client"
 
 export async function bootstrap(apiClient: ApiClient): Promise<true> {
-	await apiClient.post<void>("/api/bootstrap")
+	const response = await apiClient.rpc.api.bootstrap.$post()
+	await apiClient.unwrap(response)
 	return true
 }
 

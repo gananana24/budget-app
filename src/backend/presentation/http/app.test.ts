@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { UnauthorizedError } from "../../domain/authentication/exceptions/unauthorized-error"
 import { BootstrapRequiredError } from "../../domain/authorization/exceptions/bootstrap-required-error"
-import { BudgetLockConflictError } from "../../domain/budget/exceptions/budget-lock-conflict-error"
 import { CategoryNameConflictError } from "../../domain/category/exceptions/category-name-conflict-error"
 import { CategoryNotFoundError } from "../../domain/category/exceptions/category-not-found-error"
 import { ExpenseNotFoundError } from "../../domain/expense/exceptions/expense-not-found-error"
@@ -25,21 +24,6 @@ function createAuthorizationContext(): AuthorizationContext {
 
 function unusedMonthlyDependencies() {
 	return {
-		getBudgetDraftUseCase: {
-			execute: async () => {
-				throw new Error("Budget draft is not expected in this test")
-			},
-		},
-		saveMonthlyBudgetsUseCase: {
-			execute: async () => {
-				throw new Error("Budget saving is not expected in this test")
-			},
-		},
-		deleteMonthlyBudgetUseCase: {
-			execute: async () => {
-				throw new Error("Budget deletion is not expected in this test")
-			},
-		},
 		listCategoriesUseCase: {
 			execute: async () => {
 				throw new Error("Category listing is not expected in this test")
@@ -149,10 +133,12 @@ describe("HTTP app", () => {
 		// Act
 		const created = await app.request("/api/categories", {
 			method: "POST",
+			headers: { "content-type": "application/json" },
 			body: JSON.stringify({ name: "ペット", iconName: "paw-print" }),
 		})
 		const conflict = await app.request("/api/categories", {
 			method: "POST",
+			headers: { "content-type": "application/json" },
 			body: JSON.stringify({ name: "食費", iconName: "utensils" }),
 		})
 
@@ -194,6 +180,7 @@ describe("HTTP app", () => {
 		// Act
 		const renamed = await app.request("/api/categories/00000000-0000-4000-8000-000000000099", {
 			method: "PATCH",
+			headers: { "content-type": "application/json" },
 			body: JSON.stringify({ name: "変更", iconName: "tag" }),
 		})
 		const deleted = await app.request("/api/categories/00000000-0000-4000-8000-000000000099", {
@@ -205,6 +192,46 @@ describe("HTTP app", () => {
 		expect(deleted.status).toBe(404)
 		expect(await renamed.json()).toEqual(await deleted.json())
 	})
+
+	it.each([
+		[
+			"malformed creation JSON",
+			"POST",
+			"/api/categories",
+			"{invalid",
+			{ reason: "INVALID_FORMAT" },
+		],
+		[
+			"an invalid category name",
+			"PATCH",
+			"/api/categories/00000000-0000-4000-8000-000000000099",
+			JSON.stringify({ name: 42, iconName: "tag" }),
+			{ reason: "INVALID_FORMAT", field: "name" },
+		],
+	] as const)(
+		"rejects %s with the common validation response",
+		async (_case, method, path, body, fields) => {
+			// Arrange
+			const app = createAuthenticatedApp()
+
+			// Act
+			const response = await app.request(path, {
+				method,
+				headers: { "content-type": "application/json" },
+				body,
+			})
+
+			// Assert
+			expect(response.status).toBe(400)
+			expect(await response.json()).toEqual({
+				error: {
+					code: "VALIDATION_ERROR",
+					message: "入力内容を確認してください。",
+					fields,
+				},
+			})
+		},
+	)
 
 	it.each([
 		["VALIDATION_ERROR", new InvalidValueError("OUT_OF_RANGE"), 400],
@@ -413,8 +440,7 @@ describe("HTTP app", () => {
 		let requestedMonth: unknown
 		const overview = {
 			month: "2026-09-01",
-			initialized: false,
-			totals: { budget: 0, expenses: 1_200, remaining: -1_200 },
+			totals: { expenses: 1_200 },
 			uncategorized: { expenses: 1_200 },
 			categories: [],
 			expenses: [],
@@ -457,86 +483,6 @@ describe("HTTP app", () => {
 		expect(await response.json()).toEqual(overview)
 		expect(resolvedClerkUserId).toBe("clerk_user_verified")
 		expect(requestedMonth).toBe("2026-09-01")
-	})
-
-	it("routes budget drafts, saves, and deletion through the authenticated household", async () => {
-		// Arrange
-		const authorization = createAuthorizationContext()
-		const categoryId = "00000000-0000-4000-8000-000000000099"
-		const inputs: unknown[] = []
-		const app = createHttpApp({
-			...unusedMonthlyDependencies(),
-			authenticationMiddleware: [createAuthenticatedUserMiddleware(() => "clerk_user_verified")],
-			bootstrapUseCase: {
-				execute: async () => {
-					throw new Error("Unused")
-				},
-			},
-			resolveAuthorizationUseCase: { execute: async () => authorization },
-			getBudgetDraftUseCase: {
-				execute: async (input) => {
-					inputs.push(input)
-					return { month: "2026-09-01", initialized: false, budgets: [] }
-				},
-			},
-			saveMonthlyBudgetsUseCase: {
-				execute: async (input) => {
-					inputs.push(input)
-					return { month: "2026-09-01", initialized: true, budgets: [{ categoryId, amount: 0 }] }
-				},
-			},
-			deleteMonthlyBudgetUseCase: {
-				execute: async (input) => {
-					inputs.push(input)
-				},
-			},
-		})
-
-		// Act
-		const preview = await app.request("/api/months/2026-09-01/budget-draft")
-		const saved = await app.request("/api/months/2026-09-01/budgets", {
-			method: "PUT",
-			body: JSON.stringify({ budgets: [{ categoryId, amount: 0 }], householdId: "spoofed" }),
-		})
-		const deleted = await app.request(`/api/months/2026-09-01/budgets/${categoryId}`, {
-			method: "DELETE",
-		})
-
-		// Assert
-		expect(preview.status).toBe(200)
-		expect(saved.status).toBe(200)
-		expect(await saved.json()).toEqual({
-			month: "2026-09-01",
-			initialized: true,
-			budgets: [{ categoryId, amount: 0 }],
-		})
-		expect(deleted.status).toBe(204)
-		expect(inputs).toEqual([
-			{ authorization, month: "2026-09-01" },
-			{ authorization, month: "2026-09-01", budgets: [{ categoryId, amount: 0 }] },
-			{ authorization, month: "2026-09-01", categoryId },
-		])
-	})
-
-	it("maps a budget lock timeout to a retryable conflict without leaking database details", async () => {
-		// Arrange
-		const app = createAuthenticatedApp()
-		app.get("/api/lock-error", () => {
-			throw new BudgetLockConflictError()
-		})
-
-		// Act
-		const response = await app.request("/api/lock-error")
-
-		// Assert
-		expect(response.status).toBe(409)
-		expect(await response.json()).toEqual({
-			error: {
-				code: "BUDGET_LOCK_CONFLICT",
-				message: "予算の更新が重なりました。もう一度お試しください。",
-				fields: {},
-			},
-		})
 	})
 
 	it("creates an expense for the authenticated household", async () => {
@@ -612,6 +558,68 @@ describe("HTTP app", () => {
 				code: "VALIDATION_ERROR",
 				message: "入力内容を確認してください。",
 				fields: { reason: "INVALID_FORMAT" },
+			},
+		})
+	})
+
+	it.each([
+		[
+			"an invalid amount",
+			{ date: "2026-10-05", amount: "1200" },
+			{ reason: "OUT_OF_RANGE", field: "amount" },
+		],
+		[
+			"an invalid memo",
+			{ date: "2026-10-05", amount: 1_200, memo: 42 },
+			{ reason: "INVALID_FORMAT", field: "memo" },
+		],
+	] as const)("rejects %s with the common validation response", async (_case, body, fields) => {
+		// Arrange
+		const app = createAuthenticatedApp()
+
+		// Act
+		const response = await app.request("/api/expenses", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify(body),
+		})
+
+		// Assert
+		expect(response.status).toBe(400)
+		expect(await response.json()).toEqual({
+			error: {
+				code: "VALIDATION_ERROR",
+				message: "入力内容を確認してください。",
+				fields,
+			},
+		})
+	})
+
+	it.each([
+		["malformed JSON", "{invalid", { reason: "INVALID_FORMAT" }],
+		[
+			"an invalid amount",
+			JSON.stringify({ date: "2026-10-05", amount: "1200" }),
+			{ reason: "OUT_OF_RANGE", field: "amount" },
+		],
+	] as const)("rejects expense updates with %s", async (_case, body, fields) => {
+		// Arrange
+		const app = createAuthenticatedApp()
+
+		// Act
+		const response = await app.request("/api/expenses/00000000-0000-4000-8000-000000000003", {
+			method: "PATCH",
+			headers: { "content-type": "application/json" },
+			body,
+		})
+
+		// Assert
+		expect(response.status).toBe(400)
+		expect(await response.json()).toEqual({
+			error: {
+				code: "VALIDATION_ERROR",
+				message: "入力内容を確認してください。",
+				fields,
 			},
 		})
 	})

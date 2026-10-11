@@ -12,33 +12,26 @@ import type { MonthlyOverview } from "../monthly/api/monthly-overview"
 
 const CURRENT_OVERVIEW: MonthlyOverview = {
 	month: "2026-10-01",
-	initialized: true,
-	totals: { budget: 10_000, expenses: 12_000, remaining: -2_000 },
+	totals: { expenses: 12_000 },
 	uncategorized: { expenses: 1_000 },
 	categories: [
 		{
 			id: "food",
 			name: "食費",
 			iconName: "utensils",
-			budget: { status: "set", amount: 10_000 },
 			expenses: 10_500,
-			remaining: -500,
 		},
 		{
 			id: "daily",
 			name: "日用品",
 			iconName: "shopping-basket",
-			budget: { status: "unset" },
 			expenses: 500,
-			remaining: null,
 		},
 		{
 			id: "transport",
 			name: "交通費",
 			iconName: "train-front",
-			budget: { status: "set", amount: 0 },
 			expenses: 0,
-			remaining: 0,
 		},
 	],
 	expenses: [],
@@ -69,7 +62,7 @@ function renderHome(fetch: typeof globalThis.fetch, initialPath = "/") {
 afterEach(() => vi.useRealTimers())
 
 describe("monthly home", () => {
-	it("shows a compact current-month breakdown with distinct over-budget and unset states", async () => {
+	it("shows current-month expenses and category spending", async () => {
 		// Arrange
 		vi.useFakeTimers({ toFake: ["Date"] })
 		vi.setSystemTime(new Date("2026-10-05T00:00:00.000Z"))
@@ -82,8 +75,6 @@ describe("monthly home", () => {
 		// Assert
 		expect(screen.getByRole("heading", { name: "今月の家計" })).toBeInTheDocument()
 		expect(screen.getByText("2026年10月")).toBeInTheDocument()
-		expect(screen.getAllByText("予算超過")).toHaveLength(2)
-		expect(screen.getByText("予算未設定")).toBeInTheDocument()
 		expect(screen.getByText("未分類")).toBeInTheDocument()
 		expect(screen.queryByText("交通費")).not.toBeInTheDocument()
 		expect(screen.queryByRole("button", { name: "前の月" })).not.toBeInTheDocument()
@@ -96,7 +87,7 @@ describe("monthly home", () => {
 		)
 	})
 
-	it("shows every category, including zero budgets, in the monthly details", async () => {
+	it("shows categories with spending in the monthly details", async () => {
 		// Arrange
 		vi.useFakeTimers({ toFake: ["Date"] })
 		vi.setSystemTime(new Date("2026-10-05T00:00:00.000Z"))
@@ -107,29 +98,26 @@ describe("monthly home", () => {
 
 		// Act
 		await user.click(screen.getByRole("link", { name: "すべてのカテゴリーを見る" }))
-		await screen.findByText("交通費")
+		await screen.findByText("日用品")
 
 		// Assert
 		expect(router.state.location.pathname).toBe("/expenses")
-		expect(screen.getByText("予算 ￥0")).toBeInTheDocument()
 		expect(screen.getByRole("button", { name: "前の月" })).toBeInTheDocument()
+		expect(screen.queryByText("交通費")).not.toBeInTheDocument()
 	})
 
-	it("reads an uninitialized past month from monthly details without a write request", async () => {
+	it("reads a past month from monthly details without a write request", async () => {
 		// Arrange
 		vi.useFakeTimers({ toFake: ["Date"] })
 		vi.setSystemTime(new Date("2026-10-05T00:00:00.000Z"))
 		const pastOverview: MonthlyOverview = {
 			...CURRENT_OVERVIEW,
 			month: "2026-09-01",
-			initialized: false,
-			totals: { budget: 0, expenses: 0, remaining: 0 },
+			totals: { expenses: 0 },
 			uncategorized: { expenses: 0 },
 			categories: CURRENT_OVERVIEW.categories.map((category) => ({
 				...category,
-				budget: { status: "unset" },
 				expenses: 0,
-				remaining: null,
 			})),
 		}
 		const fetch = vi.fn<typeof globalThis.fetch>(async (input) =>

@@ -1,8 +1,6 @@
 import type { Context } from "hono"
 import { UnauthorizedError } from "../../domain/authentication/exceptions/unauthorized-error"
 import { BootstrapRequiredError } from "../../domain/authorization/exceptions/bootstrap-required-error"
-import { BudgetLockConflictError } from "../../domain/budget/exceptions/budget-lock-conflict-error"
-import { BudgetNotFoundError } from "../../domain/budget/exceptions/budget-not-found-error"
 import { CategoryNameConflictError } from "../../domain/category/exceptions/category-name-conflict-error"
 import { CategoryNotFoundError } from "../../domain/category/exceptions/category-not-found-error"
 import { ExpenseCategoryNotFoundError } from "../../domain/expense/exceptions/expense-category-not-found-error"
@@ -44,15 +42,10 @@ export function domainErrorResponse(error: unknown, context: Context): Response 
 	if (error instanceof CategoryNameConflictError) {
 		return context.json(errorBody("CATEGORY_NAME_CONFLICT"), 409)
 	}
-	if (error instanceof BudgetLockConflictError) {
-		return context.json(errorBody("BUDGET_LOCK_CONFLICT"), 409)
-	}
-
 	if (
 		error instanceof CategoryNotFoundError ||
 		error instanceof ExpenseCategoryNotFoundError ||
-		error instanceof ExpenseNotFoundError ||
-		error instanceof BudgetNotFoundError
+		error instanceof ExpenseNotFoundError
 	) {
 		return context.json(errorBody("NOT_FOUND"), 404)
 	}

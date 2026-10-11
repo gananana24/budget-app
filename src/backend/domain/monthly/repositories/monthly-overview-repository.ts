@@ -1,11 +1,10 @@
-import type { MonthStart } from "../../budget/value-objects/month-start"
 import type { HouseholdId } from "../../household/value-objects/household-id"
+import type { MonthStart } from "../value-objects/month-start"
 
 export type MonthlyCategoryRecord = Readonly<{
 	id: string
 	name: string
 	iconName: string
-	budgetAmount: number | null
 	expenseAmount: number
 }>
 
@@ -20,8 +19,6 @@ export type MonthlyExpenseRecord = Readonly<{
 }>
 
 export type MonthlyOverviewRecord = Readonly<{
-	initialized: boolean
-	totalBudgetAmount: number
 	totalExpenseAmount: number
 	uncategorizedExpenseAmount: number
 	categories: readonly MonthlyCategoryRecord[]

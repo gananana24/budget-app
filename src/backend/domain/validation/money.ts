@@ -18,7 +18,3 @@ function validateIntegerInRange(value: unknown, minimum: number): ValidationResu
 export function validateExpenseAmount(value: unknown): ValidationResult<number> {
 	return validateIntegerInRange(value, 1)
 }
-
-export function validateBudgetAmount(value: unknown): ValidationResult<number> {
-	return validateIntegerInRange(value, 0)
-}

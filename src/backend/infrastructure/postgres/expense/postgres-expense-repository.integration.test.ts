@@ -8,7 +8,6 @@ import { DefaultBootstrapUseCase } from "../../../usecase/bootstrap/bootstrap-us
 import { DefaultCreateExpenseUseCase } from "../../../usecase/expense/create-expense-use-case"
 import { DefaultDeleteExpenseUseCase } from "../../../usecase/expense/delete-expense-use-case"
 import { DefaultUpdateExpenseUseCase } from "../../../usecase/expense/update-expense-use-case"
-import { PostgresBudgetPeriodRepository } from "../budget/postgres-budget-period-repository"
 import { withPostgresTransaction } from "../database"
 import { PostgresHouseholdMembershipRepository } from "../household/postgres-household-membership-repository"
 import { PostgresHouseholdRepository } from "../household/postgres-household-repository"
@@ -32,8 +31,6 @@ async function bootstrap(clerkUserId: string) {
 			userRepository: new PostgresUserRepository(client),
 			householdRepository: new PostgresHouseholdRepository(client),
 			householdMembershipRepository: new PostgresHouseholdMembershipRepository(client),
-			budgetPeriodRepository: new PostgresBudgetPeriodRepository(client),
-			now: () => new Date("2026-10-05T00:00:00.000Z"),
 		}).execute(ClerkUserId.from(clerkUserId)),
 	)
 }

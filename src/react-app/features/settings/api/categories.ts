@@ -1,26 +1,43 @@
 import { queryOptions } from "@tanstack/react-query"
+import type { InferResponseType } from "hono/client"
 import type { ApiClient } from "../../../lib/api-client"
 
-export type Category = Readonly<{ id: string; name: string; iconName: string; isInitial: boolean }>
+type CategoriesResponse = InferResponseType<ApiClient["rpc"]["api"]["categories"]["$get"], 200>
+export type Category = CategoriesResponse["categories"][number]
 
 export const categoriesQueryKey = ["categories"] as const
 
 export function getCategoriesQueryOptions(apiClient: ApiClient) {
 	return queryOptions({
 		queryKey: categoriesQueryKey,
-		queryFn: ({ signal }) =>
-			apiClient.get<{ categories: readonly Category[] }>("/api/categories", { signal }),
+		queryFn: async ({ signal }) => {
+			const response = await apiClient.rpc.api.categories.$get(undefined, { init: { signal } })
+			return apiClient.unwrap(response)
+		},
 	})
 }
 
-export function createCategory(apiClient: ApiClient, name: string, iconName: string) {
-	return apiClient.post<Category>("/api/categories", { name, iconName })
+export async function createCategory(apiClient: ApiClient, name: string, iconName: string) {
+	const response = await apiClient.rpc.api.categories.$post({ json: { name, iconName } })
+	return apiClient.unwrap(response)
 }
 
-export function updateCategory(apiClient: ApiClient, id: string, name: string, iconName: string) {
-	return apiClient.patch<Category>(`/api/categories/${encodeURIComponent(id)}`, { name, iconName })
+export async function updateCategory(
+	apiClient: ApiClient,
+	id: string,
+	name: string,
+	iconName: string,
+) {
+	const response = await apiClient.rpc.api.categories[":categoryId"].$patch({
+		param: { categoryId: encodeURIComponent(id) },
+		json: { name, iconName },
+	})
+	return apiClient.unwrap(response)
 }
 
-export function deleteCategory(apiClient: ApiClient, id: string) {
-	return apiClient.delete(`/api/categories/${encodeURIComponent(id)}`)
+export async function deleteCategory(apiClient: ApiClient, id: string) {
+	const response = await apiClient.rpc.api.categories[":categoryId"].$delete({
+		param: { categoryId: encodeURIComponent(id) },
+	})
+	await apiClient.unwrap(response)
 }

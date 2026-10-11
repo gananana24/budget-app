@@ -60,13 +60,13 @@ src/backend/
 │   ├── household/
 │   ├── expense/
 │   ├── category/
-│   └── budget/
+│   └── monthly/
 ├── usecase/
 │   ├── bootstrap/
 │   ├── authorization/
 │   ├── expense/
 │   ├── category/
-│   └── budget/
+│   └── monthly/
 ├── infrastructure/
 │   ├── di/
 │   │   └── injection.ts
@@ -76,7 +76,7 @@ src/backend/
 │       ├── household/
 │       ├── expense/
 │       ├── category/
-│       └── budget/
+│       └── monthly/
 ├── presentation/
 │   └── http/
 │       ├── app.ts
