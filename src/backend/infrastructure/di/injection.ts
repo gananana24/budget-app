@@ -3,6 +3,12 @@ import type { ResolveAuthorizationUseCase } from "../../usecase/authorization/re
 import { DefaultResolveAuthorizationUseCase } from "../../usecase/authorization/resolve-authorization-use-case"
 import type { BootstrapUseCase } from "../../usecase/bootstrap/bootstrap-use-case"
 import { DefaultBootstrapUseCase } from "../../usecase/bootstrap/bootstrap-use-case"
+import type { DeleteMonthlyBudgetUseCase } from "../../usecase/budget/delete-monthly-budget-use-case"
+import { DefaultDeleteMonthlyBudgetUseCase } from "../../usecase/budget/delete-monthly-budget-use-case"
+import type { GetBudgetDraftUseCase } from "../../usecase/budget/get-budget-draft-use-case"
+import { DefaultGetBudgetDraftUseCase } from "../../usecase/budget/get-budget-draft-use-case"
+import type { SaveMonthlyBudgetsUseCase } from "../../usecase/budget/save-monthly-budgets-use-case"
+import { DefaultSaveMonthlyBudgetsUseCase } from "../../usecase/budget/save-monthly-budgets-use-case"
 import type { CreateCategoryUseCase } from "../../usecase/category/create-category-use-case"
 import { DefaultCreateCategoryUseCase } from "../../usecase/category/create-category-use-case"
 import type { DeleteCategoryUseCase } from "../../usecase/category/delete-category-use-case"
@@ -20,6 +26,7 @@ import { DefaultUpdateExpenseUseCase } from "../../usecase/expense/update-expens
 import type { GetMonthlyOverviewUseCase } from "../../usecase/monthly/get-monthly-overview-use-case"
 import { DefaultGetMonthlyOverviewUseCase } from "../../usecase/monthly/get-monthly-overview-use-case"
 import { PostgresBudgetPeriodRepository } from "../postgres/budget/postgres-budget-period-repository"
+import { PostgresMonthlyBudgetRepository } from "../postgres/budget/postgres-monthly-budget-repository"
 import { PostgresCategoryRepository } from "../postgres/category/postgres-category-repository"
 import {
 	withPostgresClient,
@@ -45,6 +52,9 @@ export type WorkerDependencies = Readonly<{
 	createCategoryUseCase: CreateCategoryUseCase
 	updateCategoryUseCase: UpdateCategoryUseCase
 	deleteCategoryUseCase: DeleteCategoryUseCase
+	getBudgetDraftUseCase: GetBudgetDraftUseCase
+	saveMonthlyBudgetsUseCase: SaveMonthlyBudgetsUseCase
+	deleteMonthlyBudgetUseCase: DeleteMonthlyBudgetUseCase
 }>
 
 export function newWorkerDependencies(env: DatabaseEnv): WorkerDependencies {
@@ -130,6 +140,33 @@ export function newWorkerDependencies(env: DatabaseEnv): WorkerDependencies {
 			execute: (input) =>
 				withPostgresTransaction(connectionString, (client) =>
 					new DefaultDeleteCategoryUseCase(new PostgresCategoryRepository(client)).execute(input),
+				),
+		},
+		getBudgetDraftUseCase: {
+			execute: (input) =>
+				withPostgresReadTransaction(connectionString, (client) =>
+					new DefaultGetBudgetDraftUseCase(
+						new PostgresMonthlyBudgetRepository(client),
+						() => new Date(),
+					).execute(input),
+				),
+		},
+		saveMonthlyBudgetsUseCase: {
+			execute: (input) =>
+				withPostgresTransaction(connectionString, (client) =>
+					new DefaultSaveMonthlyBudgetsUseCase(
+						new PostgresMonthlyBudgetRepository(client),
+						() => new Date(),
+					).execute(input),
+				),
+		},
+		deleteMonthlyBudgetUseCase: {
+			execute: (input) =>
+				withPostgresTransaction(connectionString, (client) =>
+					new DefaultDeleteMonthlyBudgetUseCase(
+						new PostgresMonthlyBudgetRepository(client),
+						() => new Date(),
+					).execute(input),
 				),
 		},
 	}

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { UnauthorizedError } from "../../domain/authentication/exceptions/unauthorized-error"
 import { BootstrapRequiredError } from "../../domain/authorization/exceptions/bootstrap-required-error"
+import { BudgetLockConflictError } from "../../domain/budget/exceptions/budget-lock-conflict-error"
 import { CategoryNameConflictError } from "../../domain/category/exceptions/category-name-conflict-error"
 import { CategoryNotFoundError } from "../../domain/category/exceptions/category-not-found-error"
 import { ExpenseNotFoundError } from "../../domain/expense/exceptions/expense-not-found-error"
@@ -24,6 +25,21 @@ function createAuthorizationContext(): AuthorizationContext {
 
 function unusedMonthlyDependencies() {
 	return {
+		getBudgetDraftUseCase: {
+			execute: async () => {
+				throw new Error("Budget draft is not expected in this test")
+			},
+		},
+		saveMonthlyBudgetsUseCase: {
+			execute: async () => {
+				throw new Error("Budget saving is not expected in this test")
+			},
+		},
+		deleteMonthlyBudgetUseCase: {
+			execute: async () => {
+				throw new Error("Budget deletion is not expected in this test")
+			},
+		},
 		listCategoriesUseCase: {
 			execute: async () => {
 				throw new Error("Category listing is not expected in this test")
@@ -441,6 +457,86 @@ describe("HTTP app", () => {
 		expect(await response.json()).toEqual(overview)
 		expect(resolvedClerkUserId).toBe("clerk_user_verified")
 		expect(requestedMonth).toBe("2026-09-01")
+	})
+
+	it("routes budget drafts, saves, and deletion through the authenticated household", async () => {
+		// Arrange
+		const authorization = createAuthorizationContext()
+		const categoryId = "00000000-0000-4000-8000-000000000099"
+		const inputs: unknown[] = []
+		const app = createHttpApp({
+			...unusedMonthlyDependencies(),
+			authenticationMiddleware: [createAuthenticatedUserMiddleware(() => "clerk_user_verified")],
+			bootstrapUseCase: {
+				execute: async () => {
+					throw new Error("Unused")
+				},
+			},
+			resolveAuthorizationUseCase: { execute: async () => authorization },
+			getBudgetDraftUseCase: {
+				execute: async (input) => {
+					inputs.push(input)
+					return { month: "2026-09-01", initialized: false, budgets: [] }
+				},
+			},
+			saveMonthlyBudgetsUseCase: {
+				execute: async (input) => {
+					inputs.push(input)
+					return { month: "2026-09-01", initialized: true, budgets: [{ categoryId, amount: 0 }] }
+				},
+			},
+			deleteMonthlyBudgetUseCase: {
+				execute: async (input) => {
+					inputs.push(input)
+				},
+			},
+		})
+
+		// Act
+		const preview = await app.request("/api/months/2026-09-01/budget-draft")
+		const saved = await app.request("/api/months/2026-09-01/budgets", {
+			method: "PUT",
+			body: JSON.stringify({ budgets: [{ categoryId, amount: 0 }], householdId: "spoofed" }),
+		})
+		const deleted = await app.request(`/api/months/2026-09-01/budgets/${categoryId}`, {
+			method: "DELETE",
+		})
+
+		// Assert
+		expect(preview.status).toBe(200)
+		expect(saved.status).toBe(200)
+		expect(await saved.json()).toEqual({
+			month: "2026-09-01",
+			initialized: true,
+			budgets: [{ categoryId, amount: 0 }],
+		})
+		expect(deleted.status).toBe(204)
+		expect(inputs).toEqual([
+			{ authorization, month: "2026-09-01" },
+			{ authorization, month: "2026-09-01", budgets: [{ categoryId, amount: 0 }] },
+			{ authorization, month: "2026-09-01", categoryId },
+		])
+	})
+
+	it("maps a budget lock timeout to a retryable conflict without leaking database details", async () => {
+		// Arrange
+		const app = createAuthenticatedApp()
+		app.get("/api/lock-error", () => {
+			throw new BudgetLockConflictError()
+		})
+
+		// Act
+		const response = await app.request("/api/lock-error")
+
+		// Assert
+		expect(response.status).toBe(409)
+		expect(await response.json()).toEqual({
+			error: {
+				code: "BUDGET_LOCK_CONFLICT",
+				message: "予算の更新が重なりました。もう一度お試しください。",
+				fields: {},
+			},
+		})
 	})
 
 	it("creates an expense for the authenticated household", async () => {

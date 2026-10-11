@@ -21,6 +21,9 @@ export default {
 			createCategoryUseCase: dependencies.createCategoryUseCase,
 			updateCategoryUseCase: dependencies.updateCategoryUseCase,
 			deleteCategoryUseCase: dependencies.deleteCategoryUseCase,
+			getBudgetDraftUseCase: dependencies.getBudgetDraftUseCase,
+			saveMonthlyBudgetsUseCase: dependencies.saveMonthlyBudgetsUseCase,
+			deleteMonthlyBudgetUseCase: dependencies.deleteMonthlyBudgetUseCase,
 		})
 
 		return await app.fetch(request, env, executionContext)
