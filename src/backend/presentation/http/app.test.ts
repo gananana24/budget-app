@@ -133,10 +133,12 @@ describe("HTTP app", () => {
 		// Act
 		const created = await app.request("/api/categories", {
 			method: "POST",
+			headers: { "content-type": "application/json" },
 			body: JSON.stringify({ name: "ペット", iconName: "paw-print" }),
 		})
 		const conflict = await app.request("/api/categories", {
 			method: "POST",
+			headers: { "content-type": "application/json" },
 			body: JSON.stringify({ name: "食費", iconName: "utensils" }),
 		})
 
@@ -178,6 +180,7 @@ describe("HTTP app", () => {
 		// Act
 		const renamed = await app.request("/api/categories/00000000-0000-4000-8000-000000000099", {
 			method: "PATCH",
+			headers: { "content-type": "application/json" },
 			body: JSON.stringify({ name: "変更", iconName: "tag" }),
 		})
 		const deleted = await app.request("/api/categories/00000000-0000-4000-8000-000000000099", {
@@ -189,6 +192,46 @@ describe("HTTP app", () => {
 		expect(deleted.status).toBe(404)
 		expect(await renamed.json()).toEqual(await deleted.json())
 	})
+
+	it.each([
+		[
+			"malformed creation JSON",
+			"POST",
+			"/api/categories",
+			"{invalid",
+			{ reason: "INVALID_FORMAT" },
+		],
+		[
+			"an invalid category name",
+			"PATCH",
+			"/api/categories/00000000-0000-4000-8000-000000000099",
+			JSON.stringify({ name: 42, iconName: "tag" }),
+			{ reason: "INVALID_FORMAT", field: "name" },
+		],
+	] as const)(
+		"rejects %s with the common validation response",
+		async (_case, method, path, body, fields) => {
+			// Arrange
+			const app = createAuthenticatedApp()
+
+			// Act
+			const response = await app.request(path, {
+				method,
+				headers: { "content-type": "application/json" },
+				body,
+			})
+
+			// Assert
+			expect(response.status).toBe(400)
+			expect(await response.json()).toEqual({
+				error: {
+					code: "VALIDATION_ERROR",
+					message: "入力内容を確認してください。",
+					fields,
+				},
+			})
+		},
+	)
 
 	it.each([
 		["VALIDATION_ERROR", new InvalidValueError("OUT_OF_RANGE"), 400],
@@ -515,6 +558,68 @@ describe("HTTP app", () => {
 				code: "VALIDATION_ERROR",
 				message: "入力内容を確認してください。",
 				fields: { reason: "INVALID_FORMAT" },
+			},
+		})
+	})
+
+	it.each([
+		[
+			"an invalid amount",
+			{ date: "2026-10-05", amount: "1200" },
+			{ reason: "OUT_OF_RANGE", field: "amount" },
+		],
+		[
+			"an invalid memo",
+			{ date: "2026-10-05", amount: 1_200, memo: 42 },
+			{ reason: "INVALID_FORMAT", field: "memo" },
+		],
+	] as const)("rejects %s with the common validation response", async (_case, body, fields) => {
+		// Arrange
+		const app = createAuthenticatedApp()
+
+		// Act
+		const response = await app.request("/api/expenses", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify(body),
+		})
+
+		// Assert
+		expect(response.status).toBe(400)
+		expect(await response.json()).toEqual({
+			error: {
+				code: "VALIDATION_ERROR",
+				message: "入力内容を確認してください。",
+				fields,
+			},
+		})
+	})
+
+	it.each([
+		["malformed JSON", "{invalid", { reason: "INVALID_FORMAT" }],
+		[
+			"an invalid amount",
+			JSON.stringify({ date: "2026-10-05", amount: "1200" }),
+			{ reason: "OUT_OF_RANGE", field: "amount" },
+		],
+	] as const)("rejects expense updates with %s", async (_case, body, fields) => {
+		// Arrange
+		const app = createAuthenticatedApp()
+
+		// Act
+		const response = await app.request("/api/expenses/00000000-0000-4000-8000-000000000003", {
+			method: "PATCH",
+			headers: { "content-type": "application/json" },
+			body,
+		})
+
+		// Assert
+		expect(response.status).toBe(400)
+		expect(await response.json()).toEqual({
+			error: {
+				code: "VALIDATION_ERROR",
+				message: "入力内容を確認してください。",
+				fields,
 			},
 		})
 	})

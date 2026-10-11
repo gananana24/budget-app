@@ -1,3 +1,6 @@
+import { type ClientResponse, hc } from "hono/client"
+import type { AppType } from "../../backend/presentation/http/app"
+
 type ApiErrorBody = Readonly<{
 	error: Readonly<{
 		message: string
@@ -25,11 +28,6 @@ type ApiClientOptions = Readonly<{
 	getToken: () => Promise<string | null>
 	networkErrorMessage: string
 	invalidResponseMessage: string
-}>
-
-type RequestOptions = Readonly<{
-	headers?: HeadersInit
-	signal?: AbortSignal
 }>
 
 function isApiErrorBody(value: unknown): value is ApiErrorBody {
@@ -62,7 +60,7 @@ async function getAuthToken(
 
 async function sendRequest(
 	fetch: typeof globalThis.fetch,
-	path: string,
+	path: RequestInfo | URL,
 	init: RequestInit,
 	networkErrorMessage: string,
 ): Promise<Response> {
@@ -74,7 +72,7 @@ async function sendRequest(
 }
 
 async function createResponseError(
-	response: Response,
+	response: Pick<Response, "status" | "json">,
 	invalidResponseMessage: string,
 ): Promise<ApiError> {
 	try {
@@ -87,7 +85,10 @@ async function createResponseError(
 	}
 }
 
-async function parseResponse<T>(response: Response, invalidResponseMessage: string): Promise<T> {
+async function parseResponse<T>(
+	response: Pick<Response, "status" | "json">,
+	invalidResponseMessage: string,
+): Promise<T> {
 	if (response.status === 204) {
 		return undefined as T
 	}
@@ -105,60 +106,30 @@ export function createApiClient({
 	networkErrorMessage,
 	invalidResponseMessage,
 }: ApiClientOptions) {
-	async function fetchApi<T>(
-		path: string,
-		method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
-		body: unknown,
-		options: RequestOptions,
-	): Promise<T> {
+	async function authenticatedFetch(
+		input: RequestInfo | URL,
+		init?: RequestInit,
+	): Promise<Response> {
 		const token = await getAuthToken(getToken, networkErrorMessage)
-		const headers = new Headers(options.headers)
+		const headers = new Headers(init?.headers)
 		headers.set("Accept", "application/json")
-
 		if (token) {
 			headers.set("Authorization", `Bearer ${token}`)
 		}
 
-		if (body !== undefined) {
-			headers.set("Content-Type", "application/json")
-		}
+		return sendRequest(fetch, input, { ...init, headers }, networkErrorMessage)
+	}
 
-		const response = await sendRequest(
-			fetch,
-			path,
-			{
-				method,
-				headers,
-				body: body === undefined ? undefined : JSON.stringify(body),
-				signal: options.signal,
-			},
-			networkErrorMessage,
-		)
+	const rpc = hc<AppType>("/", { fetch: authenticatedFetch })
 
+	async function unwrap<T>(response: ClientResponse<T> | Response): Promise<T> {
 		if (!response.ok) {
 			throw await createResponseError(response, invalidResponseMessage)
 		}
-
 		return parseResponse<T>(response, invalidResponseMessage)
 	}
 
-	return {
-		get<T>(path: string, options: RequestOptions = {}): Promise<T> {
-			return fetchApi<T>(path, "GET", undefined, options)
-		},
-		post<T>(path: string, body?: unknown, options: RequestOptions = {}): Promise<T> {
-			return fetchApi<T>(path, "POST", body, options)
-		},
-		put<T>(path: string, body: unknown, options: RequestOptions = {}): Promise<T> {
-			return fetchApi<T>(path, "PUT", body, options)
-		},
-		patch<T>(path: string, body: unknown, options: RequestOptions = {}): Promise<T> {
-			return fetchApi<T>(path, "PATCH", body, options)
-		},
-		delete(path: string, options: RequestOptions = {}): Promise<void> {
-			return fetchApi<void>(path, "DELETE", undefined, options)
-		},
-	}
+	return { rpc, unwrap }
 }
 
 export type ApiClient = ReturnType<typeof createApiClient>

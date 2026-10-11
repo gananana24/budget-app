@@ -98,11 +98,12 @@ describe("monthly home", () => {
 
 		// Act
 		await user.click(screen.getByRole("link", { name: "すべてのカテゴリーを見る" }))
-		await screen.findByText("交通費")
+		await screen.findByText("日用品")
 
 		// Assert
 		expect(router.state.location.pathname).toBe("/expenses")
 		expect(screen.getByRole("button", { name: "前の月" })).toBeInTheDocument()
+		expect(screen.queryByText("交通費")).not.toBeInTheDocument()
 	})
 
 	it("reads a past month from monthly details without a write request", async () => {

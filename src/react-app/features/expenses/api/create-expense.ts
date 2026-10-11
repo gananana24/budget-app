@@ -1,20 +1,11 @@
+import type { InferResponseType } from "hono/client"
 import type { ApiClient } from "@/lib/api-client"
+import type { CreateExpenseRequest } from "../../../../shared/api/create-expense"
 
-export type CreateExpenseInput = Readonly<{
-	date: string
-	amount: number
-	categoryId: string | null
-	memo: string | null
-}>
+export type CreateExpenseInput = CreateExpenseRequest
+export type CreatedExpense = InferResponseType<ApiClient["rpc"]["api"]["expenses"]["$post"], 201>
 
-export type CreatedExpense = Readonly<{
-	id: string
-	date: string
-	amount: number
-	categoryId: string | null
-	memo: string | null
-}>
-
-export function createExpense(apiClient: ApiClient, input: CreateExpenseInput) {
-	return apiClient.post<CreatedExpense>("/api/expenses", input)
+export async function createExpense(apiClient: ApiClient, input: CreateExpenseInput) {
+	const response = await apiClient.rpc.api.expenses.$post({ json: input })
+	return apiClient.unwrap(response)
 }

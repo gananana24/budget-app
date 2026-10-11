@@ -46,31 +46,44 @@ export function createHttpApp({
 	createCategoryUseCase,
 	updateCategoryUseCase,
 	deleteCategoryUseCase,
-}: HttpAppDependencies): Hono<HttpEnvironment> {
+}: HttpAppDependencies) {
 	const app = new Hono<HttpEnvironment>()
 
 	app.use("/api/*", ...authenticationMiddleware)
-	new BootstrapApiRouteHandler(bootstrapUseCase).registerRoutes(app)
-	new CreateExpenseApiRouteHandler(
-		resolveAuthorizationUseCase,
-		createExpenseUseCase,
-	).registerRoutes(app)
-	new ChangeExpenseApiRouteHandler(
-		resolveAuthorizationUseCase,
-		updateExpenseUseCase,
-		deleteExpenseUseCase,
-	).registerRoutes(app)
-	new GetMonthlyOverviewApiRouteHandler(
-		resolveAuthorizationUseCase,
-		getMonthlyOverviewUseCase,
-	).registerRoutes(app)
-	new CategoryApiRouteHandler(
-		resolveAuthorizationUseCase,
-		listCategoriesUseCase,
-		createCategoryUseCase,
-		updateCategoryUseCase,
-		deleteCategoryUseCase,
-	).registerRoutes(app)
+	const routes = app
+		.route("/", new BootstrapApiRouteHandler(bootstrapUseCase).registerRoutes())
+		.route(
+			"/",
+			new CreateExpenseApiRouteHandler(
+				resolveAuthorizationUseCase,
+				createExpenseUseCase,
+			).registerRoutes(),
+		)
+		.route(
+			"/",
+			new ChangeExpenseApiRouteHandler(
+				resolveAuthorizationUseCase,
+				updateExpenseUseCase,
+				deleteExpenseUseCase,
+			).registerRoutes(),
+		)
+		.route(
+			"/",
+			new GetMonthlyOverviewApiRouteHandler(
+				resolveAuthorizationUseCase,
+				getMonthlyOverviewUseCase,
+			).registerRoutes(),
+		)
+		.route(
+			"/",
+			new CategoryApiRouteHandler(
+				resolveAuthorizationUseCase,
+				listCategoriesUseCase,
+				createCategoryUseCase,
+				updateCategoryUseCase,
+				deleteCategoryUseCase,
+			).registerRoutes(),
+		)
 	app.notFound(notFoundResponse)
 	app.onError((error, context) => {
 		const domainResponse = domainErrorResponse(error, context)
@@ -81,5 +94,7 @@ export function createHttpApp({
 		return unexpectedErrorResponse(error, context)
 	})
 
-	return app
+	return routes
 }
+
+export type AppType = ReturnType<typeof createHttpApp>

@@ -2,7 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router"
-import { render, screen } from "@testing-library/react"
+import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import { routeTree } from "../../app/route-tree.gen"
@@ -103,5 +103,57 @@ describe("settings category management", () => {
 				body: JSON.stringify({ name: "学費", iconName: "graduation-cap" }),
 			}),
 		)
+	})
+
+	it("shows the renamed category after saving", async () => {
+		// Arrange
+		let categories = [initial, custom]
+		const fetch = vi.fn<typeof globalThis.fetch>(async (input, init) => {
+			if (String(input) === `/api/categories/${custom.id}` && init?.method === "PATCH") {
+				const body = JSON.parse(String(init.body)) as { name: string; iconName: string }
+				categories = categories.map((category) =>
+					category.id === custom.id ? { ...category, ...body } : category,
+				)
+				return Response.json(categories[1])
+			}
+			return Response.json({ categories })
+		})
+		const user = userEvent.setup()
+		renderSettings(fetch)
+		await screen.findByText("ペット")
+
+		// Act
+		await user.click(screen.getByRole("button", { name: "ペットの名前を変更" }))
+		const input = screen.getAllByRole("textbox", { name: "カテゴリー名" })[1]
+		await user.clear(input)
+		await user.type(input, "日用品")
+		await user.click(screen.getByRole("button", { name: "カテゴリー名を保存" }))
+
+		// Assert
+		expect(await screen.findByText("日用品")).toBeInTheDocument()
+		expect(screen.queryByText("ペット")).not.toBeInTheDocument()
+	})
+
+	it("removes a confirmed category from the list", async () => {
+		// Arrange
+		let categories = [initial, custom]
+		const fetch = vi.fn<typeof globalThis.fetch>(async (input, init) => {
+			if (String(input) === `/api/categories/${custom.id}` && init?.method === "DELETE") {
+				categories = [initial]
+				return new Response(null, { status: 204 })
+			}
+			return Response.json({ categories })
+		})
+		const user = userEvent.setup()
+		renderSettings(fetch)
+		await screen.findByText("ペット")
+
+		// Act
+		await user.click(screen.getByRole("button", { name: "ペットを削除" }))
+		await user.click(screen.getByRole("button", { name: "削除する" }))
+
+		// Assert
+		await waitFor(() => expect(screen.queryByText("ペット")).not.toBeInTheDocument())
+		expect(screen.getByText("食費")).toBeInTheDocument()
 	})
 })

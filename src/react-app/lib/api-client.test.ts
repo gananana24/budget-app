@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
+import { bootstrap } from "../features/bootstrap/api/bootstrap"
+import { createExpense } from "../features/expenses/api/create-expense"
 import { ApiError, createApiClient } from "./api-client"
 
 describe("API client", () => {
@@ -13,7 +15,10 @@ describe("API client", () => {
 		})
 
 		// Act
-		const result = await client.get<{ value: number }>("/api/months/2026-10-01")
+		const response = await client.rpc.api.months[":month"].$get({
+			param: { month: "2026-10-01" },
+		})
+		const result = await client.unwrap(response)
 
 		// Assert
 		expect(result).toEqual({ value: 1 })
@@ -36,12 +41,71 @@ describe("API client", () => {
 		})
 
 		// Act
-		await client.post("/api/bootstrap")
+		const result = await bootstrap(client)
 
 		// Assert
 		expect(fetch).toHaveBeenCalledOnce()
+		expect(result).toBe(true)
 		const [, init] = fetch.mock.calls[0]
 		expect(new Headers(init?.headers).get("Authorization")).toBe("Bearer session-token")
+	})
+
+	it("sends an authenticated expense through Hono RPC", async () => {
+		// Arrange
+		const input = { date: "2026-10-05", amount: 1_200, categoryId: null, memo: "夕食" }
+		const created = { id: "expense-1", ...input }
+		const fetch = vi
+			.fn<typeof globalThis.fetch>()
+			.mockResolvedValue(Response.json(created, { status: 201 }))
+		const client = createApiClient({
+			fetch,
+			getToken: async () => "session-token",
+			networkErrorMessage: "通信エラー",
+			invalidResponseMessage: "応答エラー",
+		})
+
+		// Act
+		const result = await createExpense(client, input)
+
+		// Assert
+		expect(result).toEqual(created)
+		const [path, init] = fetch.mock.calls[0]
+		expect(path).toBe("/api/expenses")
+		expect(init?.method).toBe("POST")
+		expect(new Headers(init?.headers).get("Authorization")).toBe("Bearer session-token")
+		expect(JSON.parse(String(init?.body))).toEqual(input)
+	})
+
+	it("preserves the expense API validation error from Hono RPC", async () => {
+		// Arrange
+		const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(
+			Response.json(
+				{
+					error: {
+						code: "VALIDATION_ERROR",
+						message: "入力内容を確認してください。",
+						fields: { amount: "OUT_OF_RANGE" },
+					},
+				},
+				{ status: 400 },
+			),
+		)
+		const client = createApiClient({
+			fetch,
+			getToken: async () => "session-token",
+			networkErrorMessage: "通信エラー",
+			invalidResponseMessage: "応答エラー",
+		})
+
+		// Act
+		const request = createExpense(client, { date: "2026-10-05", amount: 0 })
+
+		// Assert
+		await expect(request).rejects.toMatchObject({
+			message: "入力内容を確認してください。",
+			status: 400,
+			fields: { amount: "OUT_OF_RANGE" },
+		})
 	})
 
 	it("preserves the backend-managed error message", async () => {
@@ -65,7 +129,7 @@ describe("API client", () => {
 		})
 
 		// Act
-		const request = client.post("/api/bootstrap")
+		const request = bootstrap(client)
 
 		// Assert
 		await expect(request).rejects.toMatchObject({ message: "ログインしてください。", status: 401 })
@@ -82,7 +146,7 @@ describe("API client", () => {
 		})
 
 		// Act
-		const request = client.post("/api/bootstrap")
+		const request = bootstrap(client)
 
 		// Assert
 		await expect(request).rejects.toBeInstanceOf(ApiError)
@@ -102,7 +166,7 @@ describe("API client", () => {
 		})
 
 		// Act
-		const request = client.post("/api/bootstrap")
+		const request = bootstrap(client)
 
 		// Assert
 		await expect(request).rejects.toMatchObject({ message: "通信エラー" })

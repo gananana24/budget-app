@@ -468,7 +468,12 @@ describe("expenses screen", () => {
 
 		// Assert
 		await waitFor(() => expect(screen.queryByText("昼食")).not.toBeInTheDocument())
-		expect(fetch.mock.calls.filter(([, init]) => init?.method === "DELETE")).toHaveLength(1)
+		const deleteCalls = fetch.mock.calls.filter(([, init]) => init?.method === "DELETE")
+		expect(deleteCalls).toHaveLength(1)
+		expect(deleteCalls[0]?.[0]).toBe(`/api/expenses/${expense.id}`)
+		expect(new Headers(deleteCalls[0]?.[1]?.headers).get("Authorization")).toBe(
+			"Bearer session-token",
+		)
 	})
 
 	it("preserves an unavailable category when editing an expense from a past month", async () => {
@@ -514,6 +519,8 @@ describe("expenses screen", () => {
 		await waitFor(() => expect(router.state.location.pathname).toBe("/expenses"))
 		expect(router.state.location.search.month).toBe("2026-09")
 		const patchCall = fetch.mock.calls.find(([, init]) => init?.method === "PATCH")
+		expect(patchCall?.[0]).toBe(`/api/expenses/${expense.id}`)
+		expect(new Headers(patchCall?.[1]?.headers).get("Authorization")).toBe("Bearer session-token")
 		expect(JSON.parse(String(patchCall?.[1]?.body))).toEqual({
 			date: "2026-09-20",
 			amount: 500,
