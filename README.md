@@ -114,9 +114,9 @@ task db:dump
 
 現在の検証版: https://budget-app.yuto-urashima24.workers.dev/
 
-独自ドメインを使わず、Clerk の Development インスタンスと Cloudflare の既定 `*.workers.dev` URL で公開する手順です。Google ログインを含む操作を家族の端末で確認できます。ただし、[Clerk は Development インスタンスを本番用途に適さないと説明しています](https://clerk.com/docs/guides/development/managing-environments)。利用者が２人でも認証環境の性質は変わりません。URL を共有相手にだけ伝えてもアクセス制御にはならないため、Clerk 側で利用可能なログイン方法と新規登録の設定を確認してください。長期運用の本番受け入れ条件は、この公開だけでは満たしません。
+独自ドメインを使わず、Clerk の Development インスタンスと Cloudflare の既定 `*.workers.dev` URL で公開する手順です。Google ログインを含む操作を家族の端末で確認できます。ただし、[Clerk は Development インスタンスを本番用途に適さないと説明しています](https://clerk.com/docs/guides/development/managing-environments)。利用者が２人でも認証環境の性質は変わりません。URL を共有相手にだけ伝えてもアクセス制御にはなりません。長期運用の本番受け入れ条件は、この公開だけでは満たしません。
 
-1. Clerk Dashboard の Development インスタンスで Google ログインを有効にし、不要な認証方法を無効にします。公開後は本人と家族の Google アカウントでログインを確認します。
+1. Clerk Dashboard の Development インスタンスで Google ログインを有効にし、不要な認証方法を無効にします。[Access mode の Allowlist](https://clerk.com/docs/guides/secure/restricting-access)には本人と家族の Google メールアドレスを**個別に**追加し、Open モードのまま「Enable allowlist」を有効にして保存します。空の Allowlist を有効にすると全員の新規登録が止まるため、２件が登録済みか確認します。メールアドレスをリポジトリや作業ログへ書かないでください。
 2. Neon の対象データベースに `db/migrations/` を適用します。接続 URL は Neon が示す**直接接続**の URL を使い、下の本番手順の `dbmate` コマンドで状態も確認します。Cloudflare Dashboard で同じ DB への Hyperdrive を作り、クエリキャッシュを無効にして、その ID を `wrangler.json` の `DATABASE` binding に設定します。
 3. Wrangler の `pnpm exec wrangler whoami` でアカウントを確認します。Git 管理対象外の `.env` に `VITE_CLERK_PUBLISHABLE_KEY=pk_test_...` を、`.env.family.secrets` に同じ `CLERK_PUBLISHABLE_KEY=pk_test_...` と対応する `CLERK_SECRET_KEY=sk_test_...` を設定します。後者の権限は `chmod 600 .env.family.secrets` とします。シークレットをソース、`VITE_` 変数、ログへ置かないでください。
 4. `pnpm check` を実行し、配信物に秘密鍵や DB 接続 URL がないことを確認します。初回は `pnpm exec wrangler deploy --secrets-file .env.family.secrets` で Worker と秘密値を同時に登録します。表示された `https://<worker名>.<サブドメイン>.workers.dev` を固定 URL として使います。更新時は `pnpm deploy` を使います。
