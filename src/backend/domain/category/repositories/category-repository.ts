@@ -3,7 +3,13 @@ import type { CategoryIconName } from "../value-objects/category-icon-name"
 import type { CategoryId } from "../value-objects/category-id"
 import type { CategoryName } from "../value-objects/category-name"
 
-export type Category = Readonly<{ id: string; name: string; iconName: string; isInitial: boolean }>
+export type Category = Readonly<{
+	id: string
+	name: string
+	iconName: string
+	isInitial: boolean
+	seedKey: string | null
+}>
 
 export interface CategoryRepository {
 	findAll(householdId: HouseholdId): Promise<readonly Category[]>

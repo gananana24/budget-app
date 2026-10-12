@@ -1,4 +1,4 @@
-import { ja } from "date-fns/locale"
+import { enUS, ja } from "date-fns/locale"
 import { CalendarIcon } from "lucide-react"
 import { useState } from "react"
 import { Button } from "../../components/ui/button"
@@ -19,8 +19,10 @@ import {
 	SelectValue,
 } from "../../components/ui/select"
 import { Textarea } from "../../components/ui/textarea"
+import { categoryDisplayName } from "../../i18n/category-name"
 import { formatDate } from "../../i18n/format"
 import { messages } from "../../i18n/messages"
+import { getLocale } from "../../paraglide/runtime.js"
 import type {
 	ExpenseFormErrors,
 	ExpenseFormField,
@@ -63,14 +65,14 @@ export function ExpenseFormFields({
 }: Readonly<{
 	values: ExpenseFormValues
 	errors: ExpenseFormErrors
-	categories: ReadonlyArray<{ id: string; name: string }>
+	categories: ReadonlyArray<{ id: string; name: string; seedKey: string | null }>
 	today: string
 	updateField: (field: ExpenseFormField, value: string) => void
 }>) {
 	const [calendarOpen, setCalendarOpen] = useState(false)
 	const categoryItems = [
 		{ value: UNCATEGORIZED_VALUE, label: messages.expenses.categoryOptional() },
-		...categories.map((category) => ({ value: category.id, label: category.name })),
+		...categories.map((category) => ({ value: category.id, label: categoryDisplayName(category) })),
 	]
 	return (
 		<>
@@ -96,7 +98,7 @@ export function ExpenseFormFields({
 						<Calendar
 							className="[--cell-size:2.5rem]"
 							mode="single"
-							locale={ja}
+							locale={getLocale() === "en" ? enUS : ja}
 							selected={calendarDateFromIso(values.date)}
 							defaultMonth={calendarDateFromIso(values.date)}
 							disabled={{ after: calendarDateFromIso(today) }}
@@ -160,7 +162,7 @@ export function ExpenseFormFields({
 						</SelectItem>
 						{categories.map((category) => (
 							<SelectItem key={category.id} value={category.id}>
-								{category.name}
+								{categoryDisplayName(category)}
 							</SelectItem>
 						))}
 					</SelectContent>

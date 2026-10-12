@@ -42,6 +42,17 @@ export const messages = {
 		errorTitle: generatedMessages.monthlyErrorTitle,
 		uncategorized: generatedMessages.monthlyUncategorized,
 	},
+	category: {
+		food: generatedMessages.categoryFood,
+		daily_goods: generatedMessages.categoryDailyGoods,
+		housing: generatedMessages.categoryHousing,
+		utilities: generatedMessages.categoryUtilities,
+		communications: generatedMessages.categoryCommunications,
+		transportation: generatedMessages.categoryTransportation,
+		medical: generatedMessages.categoryMedical,
+		entertainment: generatedMessages.categoryEntertainment,
+		other: generatedMessages.categoryOther,
+	},
 	expenses: {
 		title: generatedMessages.expensesTitle,
 		add: generatedMessages.expensesAdd,
@@ -85,6 +96,9 @@ export const messages = {
 	},
 	settings: {
 		title: generatedMessages.settingsTitle,
+		languageLabel: generatedMessages.settingsLanguageLabel,
+		languageJapanese: generatedMessages.settingsLanguageJapanese,
+		languageEnglish: generatedMessages.settingsLanguageEnglish,
 		accountLabel: generatedMessages.settingsAccountLabel,
 		categoriesTitle: generatedMessages.settingsCategoriesTitle,
 		categoriesLoading: generatedMessages.settingsCategoriesLoading,

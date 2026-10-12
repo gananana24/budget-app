@@ -35,11 +35,13 @@ describe("settings screen", () => {
 			</QueryClientProvider>,
 		)
 		await screen.findByRole("heading", { name: "設定" })
+		const languageSelect = screen.getByRole("combobox", { name: "表示言語" })
 
 		// Act
 		await user.click(screen.getByRole("link", { name: "カテゴリー" }))
 
 		// Assert
+		expect(languageSelect).toHaveTextContent("日本語")
 		expect(router.state.location.pathname).toBe("/settings/categories")
 		expect(await screen.findByRole("heading", { name: "カテゴリー" })).toBeInTheDocument()
 		expect(screen.queryByRole("heading", { name: "アカウント" })).not.toBeInTheDocument()

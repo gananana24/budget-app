@@ -61,7 +61,7 @@
 	"scripts": {
 		"icons:sync": "node scripts/generate-lucide-icon-names.mjs",
     "dev": "vite",
-    "i18n:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/react-app/paraglide --emit-ts-declarations",
+    "i18n:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/react-app/paraglide --strategy localStorage baseLocale --emit-ts-declarations",
     "test": "pnpm i18n:compile && vitest run",
     "test:watch": "vitest",
     "lint": "biome check .",

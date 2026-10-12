@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router"
 import { ChevronRight } from "lucide-react"
+import { categoryDisplayName } from "../../../i18n/category-name"
 import { formatShortDate, formatYen } from "../../../i18n/format"
 import { messages } from "../../../i18n/messages"
 import type { MonthlyExpense, MonthlyOverview } from "../api/monthly-overview"
@@ -36,8 +37,11 @@ export function ExpenseList({
 	return (
 		<ul className="mt-4 space-y-1 rounded-2xl bg-white p-2" aria-label={label}>
 			{expenses.map((expense) => {
+				const category = expense.categoryId ? categoriesById.get(expense.categoryId) : undefined
 				const categoryName = expense.categoryId
-					? (categoriesById.get(expense.categoryId)?.name ?? messages.expenses.hiddenCategory())
+					? category
+						? categoryDisplayName(category)
+						: messages.expenses.hiddenCategory()
 					: messages.monthly.uncategorized()
 				const categoryIconName = expense.categoryId
 					? (categoriesById.get(expense.categoryId)?.iconName ?? "tag")

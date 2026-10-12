@@ -4,6 +4,7 @@ import type { MonthStart } from "../value-objects/month-start"
 export type MonthlyCategoryRecord = Readonly<{
 	id: string
 	name: string
+	seedKey: string | null
 	iconName: string
 	expenseAmount: number
 }>

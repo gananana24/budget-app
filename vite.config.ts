@@ -25,6 +25,7 @@ export default defineConfig({
 		paraglideVitePlugin({
 			project: "./project.inlang",
 			outdir: "./src/react-app/paraglide",
+			strategy: ["localStorage", "baseLocale"],
 			emitTsDeclarations: true,
 		}),
 		cloudflare(),

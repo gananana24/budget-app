@@ -12,6 +12,7 @@ export type MonthlyOverview = Readonly<{
 	categories: readonly Readonly<{
 		id: string
 		name: string
+		seedKey: string | null
 		iconName: string
 		expenses: number
 	}>[]
@@ -62,6 +63,7 @@ export class DefaultGetMonthlyOverviewUseCase implements GetMonthlyOverviewUseCa
 			categories: record.categories.map((category) => ({
 				id: category.id,
 				name: category.name,
+				seedKey: category.seedKey,
 				iconName: category.iconName,
 				expenses: category.expenseAmount,
 			})),

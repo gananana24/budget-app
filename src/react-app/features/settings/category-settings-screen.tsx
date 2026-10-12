@@ -14,6 +14,7 @@ import {
 } from "../../components/ui/alert-dialog"
 import { Button, buttonVariants } from "../../components/ui/button"
 import { Input } from "../../components/ui/input"
+import { categoryDisplayName } from "../../i18n/category-name"
 import { formatDocumentTitle, messages } from "../../i18n/messages"
 import { useApiClient } from "../../lib/api-client-context"
 import { CategoryIcon } from "../monthly/components/category-icon"
@@ -203,7 +204,7 @@ export function CategorySettingsScreen() {
 											<div className="flex min-h-11 items-center gap-3">
 												<CategoryIcon iconName={category.iconName} />
 												<span className="app-text-ink min-w-0 flex-1 break-words text-sm font-medium">
-													{category.name}
+													{categoryDisplayName(category)}
 												</span>
 												{category.isInitial ? (
 													<span className="app-text-muted text-xs">

@@ -3,6 +3,7 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router"
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react"
 import { useState } from "react"
 import { Button, buttonVariants } from "../../components/ui/button"
+import { categoryDisplayName } from "../../i18n/category-name"
 import { formatMonth, formatYen, getCurrentMonthStartInTokyo, shiftMonth } from "../../i18n/format"
 import { formatDocumentTitle, messages } from "../../i18n/messages"
 import { useApiClient } from "../../lib/api-client-context"
@@ -37,7 +38,7 @@ export function ExpensesScreen() {
 					: []),
 				...query.data.categories
 					.filter((category) => presentCategoryIds.has(category.id))
-					.map((category) => ({ id: category.id, label: category.name })),
+					.map((category) => ({ id: category.id, label: categoryDisplayName(category) })),
 				...([...presentCategoryIds].some((id) => !listedCategoryIds.has(id))
 					? [{ id: HIDDEN_CATEGORIES, label: messages.expenses.hiddenCategory() }]
 					: []),
