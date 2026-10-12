@@ -110,6 +110,20 @@ task db:dump
 
 本番Workerは`DATABASE` Hyperdrive bindingを通してNeonへ接続します。Hyperdriveのクエリキャッシュは無効にし、書き込み直後の認可・家計データを常にDBから取得します。ローカルでは`wrangler.json`の`localConnectionString`が同じbindingをDocker PostgreSQLへ向けます。別の接続先を一時的に使う場合は、公式の`CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_DATABASE`環境変数で上書きできます。
 
+## 家族向け検証版を workers.dev で公開する
+
+現在の検証版: https://budget-app.yuto-urashima24.workers.dev/
+
+独自ドメインを使わず、Clerk の Development インスタンスと Cloudflare の既定 `*.workers.dev` URL で公開する手順です。Google ログインを含む操作を家族の端末で確認できます。ただし、[Clerk は Development インスタンスを本番用途に適さないと説明しています](https://clerk.com/docs/guides/development/managing-environments)。利用者が２人でも認証環境の性質は変わりません。URL を共有相手にだけ伝えてもアクセス制御にはならないため、Clerk 側で利用可能なログイン方法と新規登録の設定を確認してください。長期運用の本番受け入れ条件は、この公開だけでは満たしません。
+
+1. Clerk Dashboard の Development インスタンスで Google ログインを有効にし、不要な認証方法を無効にします。公開後は本人と家族の Google アカウントでログインを確認します。
+2. Neon の対象データベースに `db/migrations/` を適用します。接続 URL は Neon が示す**直接接続**の URL を使い、下の本番手順の `dbmate` コマンドで状態も確認します。Cloudflare Dashboard で同じ DB への Hyperdrive を作り、クエリキャッシュを無効にして、その ID を `wrangler.json` の `DATABASE` binding に設定します。
+3. Wrangler の `pnpm exec wrangler whoami` でアカウントを確認します。Git 管理対象外の `.env` に `VITE_CLERK_PUBLISHABLE_KEY=pk_test_...` を、`.env.family.secrets` に同じ `CLERK_PUBLISHABLE_KEY=pk_test_...` と対応する `CLERK_SECRET_KEY=sk_test_...` を設定します。後者の権限は `chmod 600 .env.family.secrets` とします。シークレットをソース、`VITE_` 変数、ログへ置かないでください。
+4. `pnpm check` を実行し、配信物に秘密鍵や DB 接続 URL がないことを確認します。初回は `pnpm exec wrangler deploy --secrets-file .env.family.secrets` で Worker と秘密値を同時に登録します。表示された `https://<worker名>.<サブドメイン>.workers.dev` を固定 URL として使います。更新時は `pnpm deploy` を使います。
+5. 下の「公開後の確認」に沿って、両方の端末でログイン、支出・カテゴリー操作、ログアウト、ホーム画面からの起動を確認します。外部サービスの動作と実機表示は自動チェックだけでは保証できません。
+
+以前のスキーマを適用した**未利用の**Neon DBを作り直す場合は、まず利用者・家計・支出・カテゴリーの行がすべて 0 件であることを確認します。データがある DB にはこの手順を使いません。Neon CLI で対象 project・branch・database を確かめてから `neon databases delete <database> --project-id <project> --branch <branch>`、続けて `neon databases create --name <database> --owner-name <owner> --project-id <project> --branch <branch>` を実行し、現行の `db/migrations/` を直接接続 URL で最初から適用します。同じ名前・所有者を使い、Hyperdrive が同じ DB を指していることも確認します。
+
 ## 本番環境の準備とデプロイ
 
 このアプリはCloudflare Workersの静的アセットと同一オリジンの`/api`、Clerkの本番インスタンス、Neon PostgreSQL、Cloudflare Hyperdriveを使います。以下は新しい環境で再現する順序です。CloudflareとClerkの本番設定には所有するドメインを使います。
