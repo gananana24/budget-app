@@ -9,7 +9,8 @@ import type { CategoryId } from "../../../domain/category/value-objects/category
 import type { CategoryName } from "../../../domain/category/value-objects/category-name"
 import type { HouseholdId } from "../../../domain/household/value-objects/household-id"
 
-const CATEGORY_COLUMNS = "id::text AS id, name, icon_name, household_id IS NULL AS is_initial"
+const CATEGORY_COLUMNS =
+	"id::text AS id, name, icon_name, seed_key, household_id IS NULL AS is_initial"
 const INITIAL_ORDER = `CASE seed_key
   WHEN 'food' THEN 1 WHEN 'daily_goods' THEN 2 WHEN 'housing' THEN 3
   WHEN 'utilities' THEN 4 WHEN 'communications' THEN 5 WHEN 'transportation' THEN 6
@@ -22,11 +23,18 @@ function readCategory(value: unknown): Category {
 		typeof row.id !== "string" ||
 		typeof row.name !== "string" ||
 		typeof row.icon_name !== "string" ||
-		typeof row.is_initial !== "boolean"
+		typeof row.is_initial !== "boolean" ||
+		(row.seed_key !== null && typeof row.seed_key !== "string")
 	) {
 		throw new Error("Invalid category fields")
 	}
-	return { id: row.id, name: row.name, iconName: row.icon_name, isInitial: row.is_initial }
+	return {
+		id: row.id,
+		name: row.name,
+		iconName: row.icon_name,
+		isInitial: row.is_initial,
+		seedKey: row.seed_key,
+	}
 }
 
 function rethrowNameConflict(error: unknown): never {

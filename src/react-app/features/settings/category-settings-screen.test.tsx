@@ -14,12 +14,14 @@ vi.mock("@clerk/react", () => ({ UserButton: () => <button type="button">アカ�
 const initial = {
 	id: "00000000-0000-4000-8000-000000000001",
 	name: "食費",
+	seedKey: "food",
 	iconName: "utensils",
 	isInitial: true,
 }
 const custom = {
 	id: "00000000-0000-4000-8000-000000000002",
 	name: "ペット",
+	seedKey: null,
 	iconName: "paw-print",
 	isInitial: false,
 }
@@ -78,6 +80,7 @@ describe("settings category management", () => {
 						name: body.name,
 						iconName: body.iconName,
 						isInitial: false,
+						seedKey: null,
 					},
 				]
 				return Response.json(categories[categories.length - 1], { status: 201 })

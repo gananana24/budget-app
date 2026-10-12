@@ -70,7 +70,7 @@ flowchart TB
 
 - 画面はReact＋Viteを使用し、TypeScriptで実装する。
 - 画面遷移はTanStack Routerのfile-based routing、サーバー状態はTanStack Queryで管理する。画面コンポーネントへURL、HTTP method、Query keyを分散させない。
-- フロントエンドの日本語文言はParaglide JSを通し、原文を`src/react-app/i18n/locales/ja.json`、アプリ向けの窓口を`src/react-app/i18n/messages.ts`へ置く。
+- フロントエンドの日本語・英語・スペイン語文言はParaglide JSを通し、翻訳を`src/react-app/i18n/locales/`、アプリ向けの窓口を`src/react-app/i18n/messages.ts`へ置く。言語選択はParaglideのlocalStorage戦略で端末に保存する。
 - スタイリングはTailwind CSS v4を基本とし、shadcn/uiは必要なコンポーネントのソースコードを追加する手段として使う。shadcnが生成したファイルは直接変更せず、アプリ固有の見た目と操作要件はラッパーまたはfeature側で追加する。
 - API通信はsame-originのnative fetchを薄く設定した`lib/api-client.ts`を使う。Axiosなどの別HTTPクライアントは追加せず、必要なHTTP methodだけを公開する。
 - APIはCloudflare Workersで実装し、画面と同じオリジンの`/api`として公開する。
@@ -229,7 +229,7 @@ MVPでは入力者の利用者IDを保存しない。
 - APIは同一オリジンの`/api`以下に置き、すべてClerkの認証を必須とする。
 - MVPではクライアントから`household_id`を受け取らない。Clerk利用者IDからアプリ利用者と所属家計をサーバー側で特定し、すべてのSQLへ家計ID条件を含める。
 - 日付は`YYYY-MM-DD`、対象月は月初日の`YYYY-MM-01`、金額はJavaScriptの安全な整数範囲を確認したJSON numberで返す。
-- エラーは`{ "error": { "code": "...", "message": "...", "fields": { ... } } }`を基本形とする。安定したエラーコードと安全な日本語メッセージはバックエンドで一元管理し、フロントエンドは受け取った`message`を加工せず表示する。通信断などレスポンスを受け取れない場合だけ、フロントエンドの共通フォールバック文言を使用する。
+- エラーは`{ "error": { "code": "...", "message": "...", "fields": { ... } } }`を基本形とする。安定したエラーコードと選択言語に応じた安全なメッセージはバックエンドで一元管理し、フロントエンドは受け取った`message`を加工せず表示する。通信断などレスポンスを受け取れない場合だけ、フロントエンドの共通フォールバック文言を使用する。
 - 存在しないデータと、別家計に属していて操作できないデータは、どちらも`404`として返して所属情報を推測できないようにする。
 - 作成成功は`201`、取得・更新成功は`200`、削除成功は本文なしの`204`を基本とする。
 

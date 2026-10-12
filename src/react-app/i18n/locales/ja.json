@@ -65,6 +65,9 @@
 	"expensesInvalidCategory": "利用できるカテゴリーを選んでください。",
 	"expensesInvalidMemo": "メモは500文字以内で入力してください。",
 	"settingsTitle": "設定",
+	"settingsLanguageLabel": "表示言語",
+	"settingsLanguageJapanese": "日本語",
+	"settingsLanguageEnglish": "English",
 	"settingsAccountLabel": "アカウント",
 	"settingsCategoriesTitle": "カテゴリー",
 	"settingsCategoriesLoading": "カテゴリーを読み込んでいます",
@@ -86,5 +89,15 @@
 	"notFoundDescription": "URLを確認するか、ホームに戻ってください。",
 	"backToHome": "ホームに戻る",
 	"routeErrorTitle": "画面を表示できませんでした",
-	"routeErrorDescription": "しばらくしてから、もう一度お試しください。"
+	"routeErrorDescription": "しばらくしてから、もう一度お試しください。",
+	"categoryFood": "食費",
+	"categoryDailyGoods": "日用品",
+	"categoryHousing": "住居費",
+	"categoryUtilities": "水道光熱費",
+	"categoryCommunications": "通信費",
+	"categoryTransportation": "交通費",
+	"categoryMedical": "医療費",
+	"categoryEntertainment": "娯楽費",
+	"categoryOther": "その他",
+	"settingsLanguageSpanish": "スペイン語"
 }

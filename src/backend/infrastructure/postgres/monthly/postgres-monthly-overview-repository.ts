@@ -12,6 +12,7 @@ const CATEGORY_SQL = `
 SELECT
   categories.id::text AS id,
   categories.name,
+  categories.seed_key,
   categories.icon_name,
   COALESCE(SUM(expenses.amount), 0)::text AS expense_amount
 FROM public.categories
@@ -101,6 +102,7 @@ function readCategory(value: unknown): MonthlyCategoryRecord {
 	if (
 		typeof row.id !== "string" ||
 		typeof row.name !== "string" ||
+		(row.seed_key !== null && typeof row.seed_key !== "string") ||
 		typeof row.icon_name !== "string"
 	) {
 		throw new Error("Category query returned invalid category fields")
@@ -109,6 +111,7 @@ function readCategory(value: unknown): MonthlyCategoryRecord {
 	return {
 		id: row.id,
 		name: row.name,
+		seedKey: row.seed_key,
 		iconName: row.icon_name,
 		expenseAmount: readSafeInteger(row.expense_amount, "category expenses"),
 	}

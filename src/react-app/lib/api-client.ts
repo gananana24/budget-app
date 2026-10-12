@@ -1,5 +1,6 @@
 import { type ClientResponse, hc } from "hono/client"
 import type { AppType } from "../../backend/presentation/http/app"
+import { getLocale } from "../paraglide/runtime.js"
 
 type ApiErrorBody = Readonly<{
 	error: Readonly<{
@@ -113,6 +114,7 @@ export function createApiClient({
 		const token = await getAuthToken(getToken, networkErrorMessage)
 		const headers = new Headers(init?.headers)
 		headers.set("Accept", "application/json")
+		headers.set("Accept-Language", getLocale())
 		if (token) {
 			headers.set("Authorization", `Bearer ${token}`)
 		}

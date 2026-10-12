@@ -1,3 +1,4 @@
+import { categoryDisplayName } from "../../../i18n/category-name"
 import { formatYen } from "../../../i18n/format"
 import { messages } from "../../../i18n/messages"
 import type { MonthlyOverview } from "../api/monthly-overview"
@@ -12,7 +13,7 @@ export function CategoryBreakdown({ overview, preview = false }: CategoryBreakdo
 	const categories = [
 		...overview.categories.map((category) => ({
 			id: category.id,
-			name: category.name,
+			name: categoryDisplayName(category),
 			iconName: category.iconName,
 			expenses: category.expenses,
 		})),

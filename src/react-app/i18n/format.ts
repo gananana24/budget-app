@@ -1,31 +1,35 @@
-const locale = "ja-JP"
+import { getLocale } from "../paraglide/runtime.js"
+
+function displayLocale(): string {
+	return getLocale() === "en" ? "en-US" : getLocale() === "es" ? "es-ES" : "ja-JP"
+}
 const timeZone = "Asia/Tokyo"
 
-const yenFormatter = new Intl.NumberFormat(locale, {
+const currencyOptions = {
 	style: "currency",
 	currency: "JPY",
 	currencyDisplay: "symbol",
 	maximumFractionDigits: 0,
-})
+} as const
 
-const dateFormatter = new Intl.DateTimeFormat(locale, {
+const dateOptions = {
 	year: "numeric",
 	month: "long",
 	day: "numeric",
 	timeZone,
-})
+} as const
 
-const shortDateFormatter = new Intl.DateTimeFormat(locale, {
+const shortDateOptions = {
 	month: "long",
 	day: "numeric",
 	timeZone,
-})
+} as const
 
-const monthFormatter = new Intl.DateTimeFormat(locale, {
+const monthOptions = {
 	year: "numeric",
 	month: "long",
 	timeZone,
-})
+} as const
 
 function parseCalendarDate(value: string): Date {
 	const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
@@ -38,19 +42,25 @@ function parseCalendarDate(value: string): Date {
 }
 
 export function formatYen(amount: number): string {
-	return yenFormatter.format(amount)
+	return new Intl.NumberFormat(displayLocale(), currencyOptions).format(amount)
 }
 
 export function formatDate(date: Date | string): string {
-	return dateFormatter.format(typeof date === "string" ? parseCalendarDate(date) : date)
+	return new Intl.DateTimeFormat(displayLocale(), dateOptions).format(
+		typeof date === "string" ? parseCalendarDate(date) : date,
+	)
 }
 
 export function formatShortDate(date: Date | string): string {
-	return shortDateFormatter.format(typeof date === "string" ? parseCalendarDate(date) : date)
+	return new Intl.DateTimeFormat(displayLocale(), shortDateOptions).format(
+		typeof date === "string" ? parseCalendarDate(date) : date,
+	)
 }
 
 export function formatMonth(date: Date | string): string {
-	return monthFormatter.format(typeof date === "string" ? parseCalendarDate(date) : date)
+	return new Intl.DateTimeFormat(displayLocale(), monthOptions).format(
+		typeof date === "string" ? parseCalendarDate(date) : date,
+	)
 }
 
 function getTokyoDateParts(date: Date): Readonly<{ year: string; month: string; day: string }> {

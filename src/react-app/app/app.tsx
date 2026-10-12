@@ -2,11 +2,19 @@ import { SignIn, useAuth } from "@clerk/react"
 import { QueryClientProvider } from "@tanstack/react-query"
 import { useMemo, useState } from "react"
 import { LoadingState } from "../components/states"
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "../components/ui/select"
 import { bootstrap } from "../features/bootstrap/api/bootstrap"
 import { BootstrapGate } from "../features/bootstrap/bootstrap-gate"
-import { messages } from "../i18n/messages"
+import { languageName, messages } from "../i18n/messages"
 import { createApiClient } from "../lib/api-client"
 import { ApiClientProvider } from "../lib/api-client-context"
+import { getLocale, setLocale } from "../paraglide/runtime.js"
 import { AppRouter } from "./app-router"
 import { createAppQueryClient } from "./query-client"
 
@@ -20,6 +28,24 @@ function SignInScreen() {
 				<p className="app-text-muted mt-3 text-sm leading-6">{messages.auth.signInDescription()}</p>
 			</header>
 			<SignIn routing="hash" />
+			<div className="flex items-center gap-3 text-sm">
+				<span id="sign-in-language">{messages.settings.languageLabel()}</span>
+				<Select
+					value={getLocale()}
+					onValueChange={(value) => {
+						if (value === "ja" || value === "en" || value === "es") setLocale(value)
+					}}
+				>
+					<SelectTrigger aria-labelledby="sign-in-language" className="min-h-11 min-w-28">
+						<SelectValue>{languageName}</SelectValue>
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="ja">{messages.settings.languageJapanese()}</SelectItem>
+						<SelectItem value="en">{messages.settings.languageEnglish()}</SelectItem>
+						<SelectItem value="es">{messages.settings.languageSpanish()}</SelectItem>
+					</SelectContent>
+				</Select>
+			</div>
 		</main>
 	)
 }

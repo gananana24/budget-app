@@ -1,4 +1,4 @@
-import { ja } from "date-fns/locale"
+import { enUS, es, ja } from "date-fns/locale"
 import { CalendarIcon } from "lucide-react"
 import { useState } from "react"
 import { Button } from "../../components/ui/button"
@@ -19,8 +19,11 @@ import {
 	SelectValue,
 } from "../../components/ui/select"
 import { Textarea } from "../../components/ui/textarea"
+import { categoryDisplayName } from "../../i18n/category-name"
 import { formatDate } from "../../i18n/format"
 import { messages } from "../../i18n/messages"
+import { getLocale } from "../../paraglide/runtime.js"
+import { CategoryIcon } from "../monthly/components/category-icon"
 import type {
 	ExpenseFormErrors,
 	ExpenseFormField,
@@ -63,15 +66,37 @@ export function ExpenseFormFields({
 }: Readonly<{
 	values: ExpenseFormValues
 	errors: ExpenseFormErrors
-	categories: ReadonlyArray<{ id: string; name: string }>
+	categories: ReadonlyArray<{
+		id: string
+		name: string
+		seedKey: string | null
+		iconName: string
+	}>
 	today: string
 	updateField: (field: ExpenseFormField, value: string) => void
 }>) {
 	const [calendarOpen, setCalendarOpen] = useState(false)
 	const categoryItems = [
 		{ value: UNCATEGORIZED_VALUE, label: messages.expenses.categoryOptional() },
-		...categories.map((category) => ({ value: category.id, label: category.name })),
+		...categories.map((category) => ({ value: category.id, label: categoryDisplayName(category) })),
 	]
+	function renderCategoryValue(value: string | null) {
+		const category = categories.find((item) => item.id === value)
+		if (!category) {
+			return (
+				<span className="flex items-center gap-2">
+					<CategoryIcon iconName="circle-help" compact />
+					{messages.expenses.categoryOptional()}
+				</span>
+			)
+		}
+		return (
+			<span className="flex items-center gap-2">
+				<CategoryIcon iconName={category.iconName} compact />
+				{categoryDisplayName(category)}
+			</span>
+		)
+	}
 	return (
 		<>
 			<Field data-invalid={Boolean(errors.date)}>
@@ -85,7 +110,7 @@ export function ExpenseFormFields({
 								variant="outline"
 								aria-invalid={Boolean(errors.date)}
 								aria-describedby={errors.date ? "expense-date-error" : undefined}
-								className="h-12 w-full justify-start px-3 text-base font-normal"
+								className="h-12 w-full justify-start bg-white px-3 text-base font-normal"
 							/>
 						}
 					>
@@ -96,7 +121,7 @@ export function ExpenseFormFields({
 						<Calendar
 							className="[--cell-size:2.5rem]"
 							mode="single"
-							locale={ja}
+							locale={getLocale() === "en" ? enUS : getLocale() === "es" ? es : ja}
 							selected={calendarDateFromIso(values.date)}
 							defaultMonth={calendarDateFromIso(values.date)}
 							disabled={{ after: calendarDateFromIso(today) }}
@@ -116,7 +141,7 @@ export function ExpenseFormFields({
 
 			<Field data-invalid={Boolean(errors.amount)}>
 				<FieldLabel htmlFor="expense-amount">{messages.expenses.amountLabel()}</FieldLabel>
-				<InputGroup className="h-12">
+				<InputGroup className="h-12 bg-white">
 					<InputGroupInput
 						id="expense-amount"
 						type="text"
@@ -150,17 +175,23 @@ export function ExpenseFormFields({
 						id="expense-category"
 						aria-invalid={Boolean(errors.categoryId)}
 						aria-describedby={errors.categoryId ? "expense-category-error" : undefined}
-						className="data-[size=default]:h-12 w-full text-base"
+						className="data-[size=default]:h-12 w-full bg-white text-base"
 					>
-						<SelectValue />
+						<SelectValue>{renderCategoryValue}</SelectValue>
 					</SelectTrigger>
 					<SelectContent align="start">
 						<SelectItem value={UNCATEGORIZED_VALUE}>
-							{messages.expenses.categoryOptional()}
+							<span className="flex items-center gap-2">
+								<CategoryIcon iconName="circle-help" compact />
+								{messages.expenses.categoryOptional()}
+							</span>
 						</SelectItem>
 						{categories.map((category) => (
 							<SelectItem key={category.id} value={category.id}>
-								{category.name}
+								<span className="flex items-center gap-2">
+									<CategoryIcon iconName={category.iconName} compact />
+									{categoryDisplayName(category)}
+								</span>
 							</SelectItem>
 						))}
 					</SelectContent>
@@ -179,7 +210,7 @@ export function ExpenseFormFields({
 					placeholder={messages.expenses.memoPlaceholder()}
 					aria-invalid={Boolean(errors.memo)}
 					aria-describedby={errors.memo ? "expense-memo-error" : undefined}
-					className="min-h-24 text-base"
+					className="min-h-24 bg-white text-base"
 					onChange={(event) => updateField("memo", event.target.value)}
 				/>
 				{errors.memo ? (

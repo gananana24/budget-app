@@ -18,18 +18,21 @@ const CURRENT_OVERVIEW: MonthlyOverview = {
 		{
 			id: "food",
 			name: "食費",
+			seedKey: "food",
 			iconName: "utensils",
 			expenses: 10_500,
 		},
 		{
 			id: "daily",
 			name: "日用品",
+			seedKey: null,
 			iconName: "shopping-basket",
 			expenses: 500,
 		},
 		{
 			id: "transport",
 			name: "交通費",
+			seedKey: null,
 			iconName: "train-front",
 			expenses: 0,
 		},

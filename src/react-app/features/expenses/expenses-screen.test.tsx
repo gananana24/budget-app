@@ -18,6 +18,7 @@ const EMPTY_OVERVIEW: MonthlyOverview = {
 		{
 			id: "00000000-0000-4000-8000-000000000020",
 			name: "食費",
+			seedKey: "food",
 			iconName: "utensils",
 			expenses: 0,
 		},
@@ -347,6 +348,7 @@ describe("expenses screen", () => {
 				{
 					id: "00000000-0000-4000-8000-000000000021",
 					name: "日用品",
+					seedKey: null,
 					iconName: "shopping-basket",
 					expenses: 0,
 				},

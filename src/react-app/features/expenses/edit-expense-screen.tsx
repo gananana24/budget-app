@@ -14,6 +14,7 @@ import {
 } from "../../components/ui/alert-dialog"
 import { Button, buttonVariants } from "../../components/ui/button"
 import { FieldGroup } from "../../components/ui/field"
+import { categoryDisplayName } from "../../i18n/category-name"
 import {
 	formatDate,
 	formatYen,
@@ -116,10 +117,16 @@ function EditExpenseForm({
 	})
 	const [errors, setErrors] = useState<ExpenseFormErrors>({})
 	const [deleteOpen, setDeleteOpen] = useState(false)
+	const expenseCategory = overview.categories.find((category) => category.id === expense.categoryId)
 	const retainedCategory =
 		expense.categoryId &&
 		!overview.categories.some((category) => category.id === expense.categoryId)
-			? { id: expense.categoryId, name: messages.expenses.hiddenCategory() }
+			? {
+					id: expense.categoryId,
+					name: messages.expenses.hiddenCategory(),
+					seedKey: null,
+					iconName: "tag",
+				}
 			: null
 	const categories = retainedCategory
 		? [...overview.categories, retainedCategory]
@@ -218,9 +225,9 @@ function EditExpenseForm({
 							{messages.expenses.deleteDescription({
 								name:
 									expense.memo ??
-									overview.categories.find((category) => category.id === expense.categoryId)
-										?.name ??
-									messages.monthly.uncategorized(),
+									(expenseCategory
+										? categoryDisplayName(expenseCategory)
+										: messages.monthly.uncategorized()),
 								date: formatDate(expense.date),
 								amount: formatYen(expense.amount),
 							})}

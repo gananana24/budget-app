@@ -154,6 +154,7 @@ describe("HTTP app", () => {
 						name: String(name),
 						iconName: String(iconName),
 						isInitial: false,
+						seedKey: null,
 					}
 				},
 			},
@@ -175,6 +176,7 @@ describe("HTTP app", () => {
 		expect(created.status).toBe(201)
 		expect(await created.json()).toMatchObject({
 			name: "ペット",
+			seedKey: null,
 			iconName: "paw-print",
 			isInitial: false,
 		})
