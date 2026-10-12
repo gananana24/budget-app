@@ -31,7 +31,7 @@ createRoot(root).render(
 	<StrictMode>
 		<ClerkProvider
 			publishableKey={clerkPublishableKey}
-		localization={locale === "ja" ? jaJP : enUS}
+			localization={locale === "ja" ? jaJP : enUS}
 		>
 			<App />
 		</ClerkProvider>

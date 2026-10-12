@@ -121,7 +121,12 @@ function EditExpenseForm({
 	const retainedCategory =
 		expense.categoryId &&
 		!overview.categories.some((category) => category.id === expense.categoryId)
-			? { id: expense.categoryId, name: messages.expenses.hiddenCategory(), seedKey: null }
+			? {
+					id: expense.categoryId,
+					name: messages.expenses.hiddenCategory(),
+					seedKey: null,
+					iconName: "tag",
+				}
 			: null
 	const categories = retainedCategory
 		? [...overview.categories, retainedCategory]
