@@ -99,6 +99,7 @@ export const messages = {
 		languageLabel: generatedMessages.settingsLanguageLabel,
 		languageJapanese: generatedMessages.settingsLanguageJapanese,
 		languageEnglish: generatedMessages.settingsLanguageEnglish,
+		languageSpanish: generatedMessages.settingsLanguageSpanish,
 		accountLabel: generatedMessages.settingsAccountLabel,
 		categoriesTitle: generatedMessages.settingsCategoriesTitle,
 		categoriesLoading: generatedMessages.settingsCategoriesLoading,
@@ -127,4 +128,15 @@ export const messages = {
 
 export function formatDocumentTitle(page: string) {
 	return messages.app.documentTitle({ page })
+}
+
+export function languageName(locale: string | null): string {
+	switch (locale) {
+		case "ja":
+			return messages.settings.languageJapanese()
+		case "es":
+			return messages.settings.languageSpanish()
+		default:
+			return messages.settings.languageEnglish()
+	}
 }

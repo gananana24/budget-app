@@ -1,7 +1,7 @@
 import { getLocale } from "../paraglide/runtime.js"
 
 function displayLocale(): string {
-	return getLocale() === "en" ? "en-US" : "ja-JP"
+	return getLocale() === "en" ? "en-US" : getLocale() === "es" ? "es-ES" : "ja-JP"
 }
 const timeZone = "Asia/Tokyo"
 

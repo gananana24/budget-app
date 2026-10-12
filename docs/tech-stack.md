@@ -70,7 +70,7 @@ flowchart TB
 
 - 画面はReact＋Viteを使用し、TypeScriptで実装する。
 - 画面遷移はTanStack Routerのfile-based routing、サーバー状態はTanStack Queryで管理する。画面コンポーネントへURL、HTTP method、Query keyを分散させない。
-- フロントエンドの日本語・英語文言はParaglide JSを通し、翻訳を`src/react-app/i18n/locales/`、アプリ向けの窓口を`src/react-app/i18n/messages.ts`へ置く。言語選択はParaglideのlocalStorage戦略で端末に保存する。
+- フロントエンドの日本語・英語・スペイン語文言はParaglide JSを通し、翻訳を`src/react-app/i18n/locales/`、アプリ向けの窓口を`src/react-app/i18n/messages.ts`へ置く。言語選択はParaglideのlocalStorage戦略で端末に保存する。
 - スタイリングはTailwind CSS v4を基本とし、shadcn/uiは必要なコンポーネントのソースコードを追加する手段として使う。shadcnが生成したファイルは直接変更せず、アプリ固有の見た目と操作要件はラッパーまたはfeature側で追加する。
 - API通信はsame-originのnative fetchを薄く設定した`lib/api-client.ts`を使う。Axiosなどの別HTTPクライアントは追加せず、必要なHTTP methodだけを公開する。
 - APIはCloudflare Workersで実装し、画面と同じオリジンの`/api`として公開する。

@@ -16,8 +16,20 @@ const en: Record<keyof typeof ja, string> = {
 	INTERNAL_ERROR: "Could not complete the request. Please try again later.",
 }
 
+const es: Record<keyof typeof ja, string> = {
+	UNAUTHORIZED:
+		"No se pudo verificar tu inicio de sesión. Vuelve a iniciar sesión e inténtalo de nuevo.",
+	BOOTSTRAP_REQUIRED: "Tu presupuesto aún no está listo.",
+	VALIDATION_ERROR: "Revisa los datos introducidos e inténtalo de nuevo.",
+	CATEGORY_NAME_CONFLICT: "Ya existe una categoría con este nombre.",
+	NOT_FOUND: "No se encontró el elemento solicitado.",
+	INTERNAL_ERROR: "No se pudo completar la solicitud. Inténtalo de nuevo más tarde.",
+}
+
 export type ErrorCode = keyof typeof ja
 
 export function errorMessage(code: ErrorCode, acceptLanguage: string | undefined): string {
-	return acceptLanguage?.toLowerCase().startsWith("en") ? en[code] : ja[code]
+	if (acceptLanguage?.toLowerCase().startsWith("en")) return en[code]
+	if (acceptLanguage?.toLowerCase().startsWith("es")) return es[code]
+	return ja[code]
 }

@@ -1,4 +1,4 @@
-import { enUS, jaJP } from "@clerk/localizations"
+import { enUS, esES, jaJP } from "@clerk/localizations"
 import { ClerkProvider } from "@clerk/react"
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
@@ -9,12 +9,14 @@ import { getLocale } from "./paraglide/runtime.js"
 
 const locale = getLocale()
 document.documentElement.lang = locale
-if (locale === "en") {
-	document.querySelector('link[rel="manifest"]')?.setAttribute("href", "/manifest.en.webmanifest")
+if (locale !== "ja") {
+	document
+		.querySelector('link[rel="manifest"]')
+		?.setAttribute("href", `/manifest.${locale}.webmanifest`)
 	document
 		.querySelector('meta[name="apple-mobile-web-app-title"]')
-		?.setAttribute("content", "Budget")
-	document.title = "Budget"
+		?.setAttribute("content", locale === "en" ? "Budget" : "Presupuesto")
+	document.title = locale === "en" ? "Budget" : "Presupuesto"
 }
 
 const root = document.getElementById("root")
@@ -31,7 +33,7 @@ createRoot(root).render(
 	<StrictMode>
 		<ClerkProvider
 			publishableKey={clerkPublishableKey}
-			localization={locale === "ja" ? jaJP : enUS}
+			localization={locale === "ja" ? jaJP : locale === "es" ? esES : enUS}
 		>
 			<App />
 		</ClerkProvider>

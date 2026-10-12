@@ -9,7 +9,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "../../components/ui/select"
-import { formatDocumentTitle, messages } from "../../i18n/messages"
+import { formatDocumentTitle, languageName, messages } from "../../i18n/messages"
 import { getLocale, setLocale } from "../../paraglide/runtime.js"
 
 export function SettingsScreen() {
@@ -49,21 +49,16 @@ export function SettingsScreen() {
 					<Select
 						value={getLocale()}
 						onValueChange={(value) => {
-							if (value === "ja" || value === "en") setLocale(value)
+							if (value === "ja" || value === "en" || value === "es") setLocale(value)
 						}}
 					>
 						<SelectTrigger aria-labelledby="language-heading" className="min-h-11 min-w-28">
-							<SelectValue>
-								{(value) =>
-									value === "ja"
-										? messages.settings.languageJapanese()
-										: messages.settings.languageEnglish()
-								}
-							</SelectValue>
+							<SelectValue>{languageName}</SelectValue>
 						</SelectTrigger>
 						<SelectContent>
 							<SelectItem value="ja">{messages.settings.languageJapanese()}</SelectItem>
 							<SelectItem value="en">{messages.settings.languageEnglish()}</SelectItem>
+							<SelectItem value="es">{messages.settings.languageSpanish()}</SelectItem>
 						</SelectContent>
 					</Select>
 				</section>

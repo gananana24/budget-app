@@ -1,4 +1,4 @@
-import { enUS, ja } from "date-fns/locale"
+import { enUS, es, ja } from "date-fns/locale"
 import { CalendarIcon } from "lucide-react"
 import { useState } from "react"
 import { Button } from "../../components/ui/button"
@@ -121,7 +121,7 @@ export function ExpenseFormFields({
 						<Calendar
 							className="[--cell-size:2.5rem]"
 							mode="single"
-							locale={getLocale() === "en" ? enUS : ja}
+							locale={getLocale() === "en" ? enUS : getLocale() === "es" ? es : ja}
 							selected={calendarDateFromIso(values.date)}
 							defaultMonth={calendarDateFromIso(values.date)}
 							disabled={{ after: calendarDateFromIso(today) }}
