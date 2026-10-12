@@ -1,4 +1,5 @@
 import type { Context } from "hono"
+import { routePath } from "hono/route"
 import { UnauthorizedError } from "../../domain/authentication/exceptions/unauthorized-error"
 import { BootstrapRequiredError } from "../../domain/authorization/exceptions/bootstrap-required-error"
 import { CategoryNameConflictError } from "../../domain/category/exceptions/category-name-conflict-error"
@@ -58,13 +59,13 @@ export function notFoundResponse(context: Context): Response {
 }
 
 export function unexpectedErrorResponse(error: unknown, context: Context): Response {
-	const requestId = context.req.header("cf-ray") ?? crypto.randomUUID()
+	const requestId = context.get("requestId") ?? crypto.randomUUID()
 	console.error(
 		JSON.stringify({
 			event: "unhandled_error",
 			requestId,
 			method: context.req.method,
-			path: new URL(context.req.url).pathname,
+			route: routePath(context, -1),
 			errorType: error instanceof Error ? error.name : "UnknownError",
 		}),
 	)

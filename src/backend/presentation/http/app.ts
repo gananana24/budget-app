@@ -1,4 +1,5 @@
 import { Hono, type MiddlewareHandler } from "hono"
+import { routePath } from "hono/route"
 import type { ResolveAuthorizationUseCase } from "../../usecase/authorization/resolve-authorization-use-case"
 import type { BootstrapUseCase } from "../../usecase/bootstrap/bootstrap-use-case"
 import type { CreateCategoryUseCase } from "../../usecase/category/create-category-use-case"
@@ -49,6 +50,32 @@ export function createHttpApp({
 }: HttpAppDependencies) {
 	const app = new Hono<HttpEnvironment>()
 
+	app.use("/api/*", async (context, next) => {
+		const requestId = context.req.header("cf-ray") ?? crypto.randomUUID()
+		const startedAt = performance.now()
+		context.set("requestId", requestId)
+		await next()
+		context.header("X-Request-Id", requestId)
+		context.header("X-Content-Type-Options", "nosniff")
+		context.header("Referrer-Policy", "strict-origin-when-cross-origin")
+		context.header("X-Frame-Options", "DENY")
+		context.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+		context.header(
+			"Content-Security-Policy",
+			"frame-ancestors 'none'; object-src 'none'; base-uri 'self'",
+		)
+		context.header("Cache-Control", "no-store")
+		console.info(
+			JSON.stringify({
+				event: "api_request",
+				requestId,
+				method: context.req.method,
+				route: routePath(context, -1),
+				status: context.res.status,
+				durationMs: Math.round(performance.now() - startedAt),
+			}),
+		)
+	})
 	app.use("/api/*", ...authenticationMiddleware)
 	const routes = app
 		.route("/", new BootstrapApiRouteHandler(bootstrapUseCase).registerRoutes())
