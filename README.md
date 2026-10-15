@@ -69,8 +69,10 @@ task dev
 | `pnpm dev` | 開発サーバーを起動 |
 | `pnpm test` | テストを一度実行 |
 | `pnpm test:watch` | テストを監視モードで実行 |
-| `pnpm lint` | BiomeのLint・フォーマット検査 |
-| `pnpm lint:fix` | Biomeで自動修正 |
+| `pnpm lint` | oxlintとoxfmtの検査 |
+| `pnpm lint:fix` | oxlintの安全な自動修正とoxfmtで整形 |
+| `pnpm format` | oxfmtで整形 |
+| `pnpm format:check` | oxfmtの整形検査 |
 | `pnpm typecheck` | TypeScriptの型検査 |
 | `pnpm build` | プロダクションビルド |
 | `pnpm check` | Lint、型検査、テスト、ビルド、Workers dry-run |
