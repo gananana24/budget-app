@@ -201,5 +201,8 @@ dist
 # Vitest reports and artifacts
 .vitest/
 
-# Local design explorations
-design/issue-6-mocks/
+# Local development materials
+/.agents/
+/.vscode/
+/design/
+/skills-lock.json
