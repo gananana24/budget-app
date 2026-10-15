@@ -1,6 +1,6 @@
 import { UserButton } from "@clerk/react"
 import { Link } from "@tanstack/react-router"
-import { ChevronRight, Languages, Tags } from "lucide-react"
+import { ChevronRight, Languages, Tags, UserRound } from "lucide-react"
 import { Screen } from "../../components/screen"
 import {
 	Select,
@@ -20,11 +20,11 @@ export function SettingsScreen() {
 			<Screen title={title}>
 				<Link
 					to="/settings/categories"
-					className="app-text-ink flex min-h-16 items-center gap-3 rounded-2xl bg-white px-4 text-base font-medium focus-visible:outline-2 focus-visible:outline-offset-2"
+					className="app-card app-text-ink flex min-h-18 items-center gap-3 px-4 text-base font-medium focus-visible:outline-2 focus-visible:outline-offset-2"
 				>
 					<span
 						aria-hidden="true"
-						className="flex size-10 items-center justify-center rounded-xl bg-[var(--budget-primary-soft)] text-[var(--budget-primary)]"
+						className="app-text-ink flex size-10 shrink-0 items-center justify-center rounded-xl bg-(--budget-primary-soft)"
 					>
 						<Tags className="size-5" />
 					</span>
@@ -32,13 +32,13 @@ export function SettingsScreen() {
 					<ChevronRight aria-hidden="true" className="app-text-muted size-5" />
 				</Link>
 				<section
-					className="mt-4 flex min-h-16 items-center justify-between gap-3 rounded-2xl bg-white px-4"
+					className="app-card mt-4 flex min-h-18 items-center justify-between gap-3 px-4"
 					aria-labelledby="language-heading"
 				>
 					<div className="flex min-w-0 flex-1 items-center gap-3">
 						<span
 							aria-hidden="true"
-							className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--budget-primary-soft)] text-[var(--budget-primary)]"
+							className="app-text-ink flex size-10 shrink-0 items-center justify-center rounded-xl bg-(--budget-primary-soft)"
 						>
 							<Languages className="size-5" />
 						</span>
@@ -55,20 +55,34 @@ export function SettingsScreen() {
 						<SelectTrigger aria-labelledby="language-heading" className="min-h-11 min-w-28">
 							<SelectValue>{languageName}</SelectValue>
 						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="ja">{messages.settings.languageJapanese()}</SelectItem>
-							<SelectItem value="en">{messages.settings.languageEnglish()}</SelectItem>
-							<SelectItem value="es">{messages.settings.languageSpanish()}</SelectItem>
+						<SelectContent className="min-w-40 p-1.5">
+							<SelectItem value="ja" className="min-h-12 px-3 pr-10 text-base">
+								{messages.settings.languageJapanese()}
+							</SelectItem>
+							<SelectItem value="en" className="min-h-12 px-3 pr-10 text-base">
+								{messages.settings.languageEnglish()}
+							</SelectItem>
+							<SelectItem value="es" className="min-h-12 px-3 pr-10 text-base">
+								{messages.settings.languageSpanish()}
+							</SelectItem>
 						</SelectContent>
 					</Select>
 				</section>
 				<section
-					className="mt-8 flex min-h-16 items-center justify-between gap-4 rounded-2xl bg-white px-4"
+					className="app-card mt-4 flex min-h-18 items-center justify-between gap-3 px-4"
 					aria-labelledby="account-heading"
 				>
-					<h2 id="account-heading" className="app-text-ink text-base font-medium">
-						{messages.settings.accountLabel()}
-					</h2>
+					<div className="flex min-w-0 flex-1 items-center gap-3">
+						<span
+							aria-hidden="true"
+							className="app-text-ink flex size-10 shrink-0 items-center justify-center rounded-xl bg-(--budget-primary-soft)"
+						>
+							<UserRound className="size-5" />
+						</span>
+						<h2 id="account-heading" className="app-text-ink text-base font-medium">
+							{messages.settings.accountLabel()}
+						</h2>
+					</div>
 					<UserButton />
 				</section>
 			</Screen>

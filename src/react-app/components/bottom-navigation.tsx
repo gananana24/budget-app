@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router"
-import { CircleDollarSign, Home, Settings } from "lucide-react"
+import { Home, PiggyBank, Settings } from "lucide-react"
 import type { ComponentType, SVGProps } from "react"
 import { messages } from "../i18n/messages"
 
@@ -11,14 +11,14 @@ type NavigationItem = Readonly<{
 
 const navigationItems: readonly NavigationItem[] = [
 	{ to: "/", label: messages.navigation.home(), icon: Home },
-	{ to: "/expenses", label: messages.navigation.expenses(), icon: CircleDollarSign },
+	{ to: "/expenses", label: messages.navigation.expenses(), icon: PiggyBank },
 	{ to: "/settings", label: messages.navigation.settings(), icon: Settings },
 ]
 
 export function BottomNavigation() {
 	return (
 		<nav
-			className="bottom-navigation app-divider fixed inset-x-0 bottom-0 z-10 border-t bg-white pb-[env(safe-area-inset-bottom)]"
+			className="bottom-navigation app-divider z-10 shrink-0 border-t bg-white/95 backdrop-blur-lg"
 			aria-label={messages.navigation.label()}
 		>
 			<ul className="mx-auto grid max-w-md grid-cols-3 px-2">

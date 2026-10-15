@@ -5,19 +5,22 @@ import { messages } from "../../i18n/messages"
 
 function AppLayout() {
 	const pathname = useRouterState({ select: (state) => state.location.pathname })
+	const isExpenseForm = pathname === "/expenses/new" || /^\/expenses\/[^/]+\/edit$/.test(pathname)
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: pathname intentionally retriggers focus after client-side navigation.
+	// pathname intentionally retriggers focus after client-side navigation.
 	useEffect(() => {
-		document.getElementById("main-content")?.focus()
+		document.getElementById("main-content")?.focus({ preventScroll: true })
 	}, [pathname])
 
 	return (
-		<div className="min-h-dvh bg-[#faf9f6] pt-[env(safe-area-inset-top)]">
+		<div className="flex h-dvh flex-col overflow-hidden bg-background pt-[env(safe-area-inset-top)]">
 			<a className="skip-link" href="#main-content">
 				{messages.action.skipToContent()}
 			</a>
-			<Outlet />
-			{pathname !== "/expenses/new" ? <BottomNavigation /> : null}
+			<div id="app-scroll-region" className="min-h-0 flex-1 overflow-y-auto">
+				<Outlet />
+			</div>
+			{isExpenseForm ? null : <BottomNavigation />}
 		</div>
 	)
 }

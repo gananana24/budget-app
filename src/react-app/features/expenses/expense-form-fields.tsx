@@ -99,6 +99,29 @@ export function ExpenseFormFields({
 	}
 	return (
 		<>
+			<Field data-invalid={Boolean(errors.amount)}>
+				<FieldLabel htmlFor="expense-amount">{messages.expenses.amountLabel()}</FieldLabel>
+				<InputGroup className="h-18 rounded-xl bg-white">
+					<InputGroupInput
+						id="expense-amount"
+						type="text"
+						inputMode="numeric"
+						autoComplete="off"
+						value={values.amount}
+						aria-invalid={Boolean(errors.amount)}
+						aria-describedby={errors.amount ? "expense-amount-error" : undefined}
+						className="h-full text-2xl font-medium tabular-nums md:text-2xl"
+						onChange={(event) => updateField("amount", event.target.value)}
+					/>
+					<InputGroupAddon align="inline-end">
+						<InputGroupText>{messages.expenses.amountUnit()}</InputGroupText>
+					</InputGroupAddon>
+				</InputGroup>
+				{errors.amount ? (
+					<FieldError id="expense-amount-error">{errorMessage("amount")}</FieldError>
+				) : null}
+			</Field>
+
 			<Field data-invalid={Boolean(errors.date)}>
 				<FieldLabel htmlFor="expense-date">{messages.expenses.dateLabel()}</FieldLabel>
 				<Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
@@ -110,7 +133,7 @@ export function ExpenseFormFields({
 								variant="outline"
 								aria-invalid={Boolean(errors.date)}
 								aria-describedby={errors.date ? "expense-date-error" : undefined}
-								className="h-12 w-full justify-start bg-white px-3 text-base font-normal"
+								className="h-14 w-full justify-start rounded-xl bg-white px-4 text-base font-normal"
 							/>
 						}
 					>
@@ -139,31 +162,8 @@ export function ExpenseFormFields({
 				) : null}
 			</Field>
 
-			<Field data-invalid={Boolean(errors.amount)}>
-				<FieldLabel htmlFor="expense-amount">{messages.expenses.amountLabel()}</FieldLabel>
-				<InputGroup className="h-12 bg-white">
-					<InputGroupInput
-						id="expense-amount"
-						type="text"
-						inputMode="numeric"
-						autoComplete="off"
-						value={values.amount}
-						aria-invalid={Boolean(errors.amount)}
-						aria-describedby={errors.amount ? "expense-amount-error" : undefined}
-						className="text-base"
-						onChange={(event) => updateField("amount", event.target.value)}
-					/>
-					<InputGroupAddon align="inline-end">
-						<InputGroupText>{messages.expenses.amountUnit()}</InputGroupText>
-					</InputGroupAddon>
-				</InputGroup>
-				{errors.amount ? (
-					<FieldError id="expense-amount-error">{errorMessage("amount")}</FieldError>
-				) : null}
-			</Field>
-
 			<Field data-invalid={Boolean(errors.categoryId)}>
-				<FieldLabel htmlFor="expense-category">{messages.expenses.categoryLabel()}</FieldLabel>
+				<FieldLabel htmlFor="expense-category">{messages.expenses.formCategoryLabel()}</FieldLabel>
 				<Select
 					items={categoryItems}
 					value={values.categoryId || UNCATEGORIZED_VALUE}
@@ -175,20 +175,24 @@ export function ExpenseFormFields({
 						id="expense-category"
 						aria-invalid={Boolean(errors.categoryId)}
 						aria-describedby={errors.categoryId ? "expense-category-error" : undefined}
-						className="data-[size=default]:h-12 w-full bg-white text-base"
+						className="data-[size=default]:h-14 w-full rounded-xl bg-white px-4 text-base"
 					>
 						<SelectValue>{renderCategoryValue}</SelectValue>
 					</SelectTrigger>
-					<SelectContent align="start">
-						<SelectItem value={UNCATEGORIZED_VALUE}>
-							<span className="flex items-center gap-2">
+					<SelectContent align="start" className="p-1.5">
+						<SelectItem value={UNCATEGORIZED_VALUE} className="min-h-12 px-3 pr-10 text-base">
+							<span className="flex items-center gap-3">
 								<CategoryIcon iconName="circle-help" compact />
 								{messages.expenses.categoryOptional()}
 							</span>
 						</SelectItem>
 						{categories.map((category) => (
-							<SelectItem key={category.id} value={category.id}>
-								<span className="flex items-center gap-2">
+							<SelectItem
+								key={category.id}
+								value={category.id}
+								className="min-h-12 px-3 pr-10 text-base"
+							>
+								<span className="flex items-center gap-3">
 									<CategoryIcon iconName={category.iconName} compact />
 									{categoryDisplayName(category)}
 								</span>
@@ -210,7 +214,7 @@ export function ExpenseFormFields({
 					placeholder={messages.expenses.memoPlaceholder()}
 					aria-invalid={Boolean(errors.memo)}
 					aria-describedby={errors.memo ? "expense-memo-error" : undefined}
-					className="min-h-24 bg-white text-base"
+					className="min-h-28 rounded-xl bg-white px-4 py-3 text-base"
 					onChange={(event) => updateField("memo", event.target.value)}
 				/>
 				{errors.memo ? (

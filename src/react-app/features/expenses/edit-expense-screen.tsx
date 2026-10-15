@@ -49,11 +49,7 @@ export function EditExpenseScreen({ expenseId }: Readonly<{ expenseId: string }>
 	return (
 		<>
 			<title>{formatDocumentTitle(messages.expenses.editTitle())}</title>
-			<main
-				id="main-content"
-				tabIndex={-1}
-				className="mx-auto w-full max-w-md px-6 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-5"
-			>
+			<main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-md px-6 pb-8 pt-5">
 				<header className="grid min-h-11 grid-cols-[1fr_auto_1fr] items-center gap-2">
 					<Link
 						to="/expenses"
@@ -191,7 +187,7 @@ function EditExpenseForm({
 						type="submit"
 						size="lg"
 						disabled={mutation.isPending}
-						className="h-12 w-full bg-[var(--budget-primary)] text-base text-white hover:bg-[var(--budget-primary)]/90"
+						className="h-14 w-full rounded-xl bg-[var(--budget-primary)] text-base font-semibold text-white hover:bg-[var(--budget-primary)]/90"
 					>
 						{mutation.isPending ? messages.expenses.saving() : messages.expenses.save()}
 					</Button>

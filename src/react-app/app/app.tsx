@@ -20,29 +20,60 @@ import { createAppQueryClient } from "./query-client"
 
 function SignInScreen() {
 	return (
-		<main className="mx-auto grid min-h-dvh w-full max-w-md content-center justify-items-center gap-8 bg-white px-6 py-8">
-			<header className="max-w-sm text-center">
-				<h1 className="app-text-ink text-3xl font-semibold tracking-tight">
-					{messages.auth.signInHeading()}
-				</h1>
-				<p className="app-text-muted mt-3 text-sm leading-6">{messages.auth.signInDescription()}</p>
-			</header>
-			<SignIn routing="hash" />
-			<div className="flex items-center gap-3 text-sm">
-				<span id="sign-in-language">{messages.settings.languageLabel()}</span>
+		<main className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-background px-6 pt-[calc(2rem+env(safe-area-inset-top))] pb-[calc(2rem+env(safe-area-inset-bottom))]">
+			<div className="flex flex-1 flex-col justify-center gap-8">
+				<header className="text-center">
+					<h1 className="app-text-ink text-2xl font-semibold tracking-tight">
+						{messages.auth.signInHeading()}
+					</h1>
+					<p className="app-text-muted mt-3 text-sm leading-6">
+						{messages.auth.signInDescription()}
+					</p>
+				</header>
+				<SignIn
+					routing="hash"
+					appearance={{
+						options: { elevation: "flush" },
+						variables: { colorBackground: "#f8faf7" },
+						elements: {
+							rootBox: { width: "100%" },
+							cardBox: { width: "100%" },
+							header: { alignItems: "center", textAlign: "center" },
+							headerTitle: { fontSize: "1.125rem", fontWeight: 600 },
+							formFieldInput: { minHeight: "3rem", backgroundColor: "#ffffff" },
+							formButtonPrimary: { minHeight: "3rem" },
+							socialButtonsBlockButton: { minHeight: "3rem", backgroundColor: "#ffffff" },
+							footerAction: { flexDirection: "column", alignItems: "center", gap: "0.25rem" },
+						},
+					}}
+				/>
+			</div>
+			<div className="app-divider mt-8 flex items-center justify-between gap-4 border-t pt-5 text-sm">
+				<span id="sign-in-language" className="app-text-muted">
+					{messages.settings.languageLabel()}
+				</span>
 				<Select
 					value={getLocale()}
 					onValueChange={(value) => {
 						if (value === "ja" || value === "en" || value === "es") setLocale(value)
 					}}
 				>
-					<SelectTrigger aria-labelledby="sign-in-language" className="min-h-11 min-w-28">
+					<SelectTrigger
+						aria-labelledby="sign-in-language"
+						className="min-h-12 min-w-32 rounded-xl border-input bg-white px-4 text-sm"
+					>
 						<SelectValue>{languageName}</SelectValue>
 					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="ja">{messages.settings.languageJapanese()}</SelectItem>
-						<SelectItem value="en">{messages.settings.languageEnglish()}</SelectItem>
-						<SelectItem value="es">{messages.settings.languageSpanish()}</SelectItem>
+					<SelectContent className="p-1.5">
+						<SelectItem value="ja" className="min-h-12 px-3 pr-10">
+							{messages.settings.languageJapanese()}
+						</SelectItem>
+						<SelectItem value="en" className="min-h-12 px-3 pr-10">
+							{messages.settings.languageEnglish()}
+						</SelectItem>
+						<SelectItem value="es" className="min-h-12 px-3 pr-10">
+							{messages.settings.languageSpanish()}
+						</SelectItem>
 					</SelectContent>
 				</Select>
 			</div>

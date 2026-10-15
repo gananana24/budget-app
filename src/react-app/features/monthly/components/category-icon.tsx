@@ -11,7 +11,7 @@ export function CategoryIcon({
 	return (
 		<span
 			aria-hidden="true"
-			className={`flex shrink-0 items-center justify-center bg-[var(--budget-primary-soft)] text-[var(--budget-primary)] ${compact ? "size-8 rounded-lg" : "size-10 rounded-xl"}`}
+			className={`app-text-ink flex shrink-0 items-center justify-center bg-[var(--budget-primary-soft)] ${compact ? "size-8 rounded-lg" : "size-10 rounded-xl"}`}
 		>
 			<DynamicIcon
 				name={name}

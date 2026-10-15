@@ -25,17 +25,42 @@ export function ExpenseList({
 
 	if (expenses.length === 0) {
 		return (
-			<div className="py-8 text-center">
-				<h3 className="app-text-ink text-base font-semibold">{messages.expenses.emptyTitle()}</h3>
-				<p className="app-text-muted mt-2 text-sm leading-6">
-					{messages.expenses.emptyDescription()}
-				</p>
+			<div className="pointer-events-none fixed inset-x-0 bottom-[calc(8.5rem+env(safe-area-inset-bottom))] z-10 mx-auto w-full max-w-md px-6">
+				<div className="ml-auto w-52">
+					<p className="app-text-muted text-right text-sm font-medium">
+						{messages.expenses.emptyHint()}
+					</p>
+					<svg
+						aria-hidden="true"
+						className="ml-auto mr-4 mt-1 h-[4.5rem] w-28 text-[var(--budget-primary)]"
+						viewBox="0 0 112 72"
+						fill="none"
+					>
+						<path
+							d="M10 8c21-9 43-4 45 14 1 12-15 16-22 8-8-10 4-18 17-12 18 9 20 33 42 40"
+							stroke="currentColor"
+							strokeWidth="2.5"
+							strokeLinecap="round"
+							strokeLinejoin="round"
+						/>
+						<path
+							d="m77 54 15 4-7-15"
+							stroke="currentColor"
+							strokeWidth="2.5"
+							strokeLinecap="round"
+							strokeLinejoin="round"
+						/>
+					</svg>
+				</div>
 			</div>
 		)
 	}
 
 	return (
-		<ul className="mt-4 space-y-1 rounded-2xl bg-white p-2" aria-label={label}>
+		<ul
+			className="app-card mt-4 divide-y divide-[var(--budget-line)] overflow-hidden px-2"
+			aria-label={label}
+		>
 			{expenses.map((expense) => {
 				const category = expense.categoryId ? categoriesById.get(expense.categoryId) : undefined
 				const categoryName = expense.categoryId
@@ -53,7 +78,7 @@ export function ExpenseList({
 								to="/expenses/$expenseId/edit"
 								params={{ expenseId: expense.id }}
 								search={{ month: editMonth }}
-								className="flex min-h-18 items-center justify-between gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-[var(--budget-primary-soft)] focus-visible:outline-2 focus-visible:outline-[var(--budget-primary)]"
+								className="flex min-h-18 items-center justify-between gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-[var(--budget-primary-soft)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--budget-primary)]"
 							>
 								<ExpenseRowContent
 									expense={expense}

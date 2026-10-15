@@ -7,6 +7,7 @@ function createAppRouter() {
 		routeTree,
 		defaultPreload: "intent",
 		scrollRestoration: true,
+		scrollToTopSelectors: ["#app-scroll-region"],
 	})
 }
 

@@ -50,7 +50,7 @@ function renderExpenseFlow(
 }
 
 describe("expenses screen", () => {
-	it("hides category filters when the selected month has no expenses", async () => {
+	it("hides category selection when the selected month has no expenses", async () => {
 		// Arrange
 		vi.useFakeTimers({ toFake: ["Date"] })
 		vi.setSystemTime(new Date("2026-10-05T00:00:00.000Z"))
@@ -64,14 +64,16 @@ describe("expenses screen", () => {
 
 		// Act
 		renderExpenseFlow(client, queryClient, "/expenses")
-		await screen.findByText("支出はまだありません")
+		await screen.findByText("ここから記録できます")
 
 		// Assert
-		expect(screen.queryByRole("group", { name: "カテゴリー" })).not.toBeInTheDocument()
+		expect(screen.getByRole("heading", { level: 1, name: "支出" })).toBeInTheDocument()
+		expect(screen.getByRole("heading", { level: 2, name: "2026年10月" })).toBeInTheDocument()
+		expect(screen.queryByRole("combobox", { name: "カテゴリーで絞り込む" })).not.toBeInTheDocument()
 		expect(screen.getByRole("link", { name: "支出を追加" })).toBeInTheDocument()
 	})
 
-	it("keeps date, amount, category, and memo in keyboard order", async () => {
+	it("keeps required amount and date before optional fields in keyboard order", async () => {
 		// Arrange
 		vi.useFakeTimers({ toFake: ["Date"] })
 		vi.setSystemTime(new Date("2026-10-05T00:00:00.000Z"))
@@ -97,8 +99,8 @@ describe("expenses screen", () => {
 		// Assert
 		expect(focusOrder).toEqual([
 			"",
-			"expense-date",
 			"expense-amount",
+			"expense-date",
 			"expense-category",
 			"expense-memo",
 		])
@@ -145,7 +147,7 @@ describe("expenses screen", () => {
 		const user = userEvent.setup()
 		const router = renderExpenseFlow(client, queryClient)
 		await screen.findByRole("heading", { name: "支出を追加" })
-		const categoryTrigger = await screen.findByRole("combobox", { name: "カテゴリー" })
+		const categoryTrigger = await screen.findByRole("combobox", { name: /カテゴリー/ })
 		expect(categoryTrigger).toHaveTextContent("未分類")
 
 		// Act
@@ -157,17 +159,13 @@ describe("expenses screen", () => {
 		await user.type(screen.getByLabelText("金額"), "1200")
 		await user.type(screen.getByLabelText("メモ（任意）"), "  夕食  ")
 		await user.click(screen.getByRole("button", { name: "登録する" }))
+		await waitFor(() => expect(router.state.location.pathname).toBe("/expenses"))
+		await user.click(await screen.findByRole("combobox", { name: "カテゴリーで絞り込む" }))
 
 		// Assert
-		await waitFor(() => expect(router.state.location.pathname).toBe("/expenses"))
 		expect(screen.getByText("2026年10月")).toBeInTheDocument()
-		expect(await screen.findAllByText("￥1,200")).toHaveLength(3)
-		expect(
-			screen
-				.getByRole("list", { name: "2026年10月の支出" })
-				.compareDocumentPosition(screen.getByRole("heading", { name: "カテゴリーごとの支出" })) &
-				Node.DOCUMENT_POSITION_FOLLOWING,
-		).toBeTruthy()
+		expect(await screen.findByRole("option", { name: /未分類.*￥1,200/ })).toBeInTheDocument()
+		expect(screen.getByRole("list", { name: "2026年10月の支出" })).toBeInTheDocument()
 		const postCall = fetch.mock.calls.find(([, init]) => init?.method === "POST")
 		expect(postCall).toBeDefined()
 		expect(JSON.parse(String(postCall?.[1]?.body))).toEqual({
@@ -343,8 +341,10 @@ describe("expenses screen", () => {
 		]
 		const overview = {
 			...EMPTY_OVERVIEW,
+			totals: { expenses: 800 },
+			uncategorized: { expenses: 300 },
 			categories: [
-				...EMPTY_OVERVIEW.categories,
+				{ ...EMPTY_OVERVIEW.categories[0], expenses: 500 },
 				{
 					id: "00000000-0000-4000-8000-000000000021",
 					name: "日用品",
@@ -367,13 +367,23 @@ describe("expenses screen", () => {
 		await screen.findByText("昼食")
 
 		// Act
-		await user.click(screen.getByRole("button", { name: "未分類" }))
+		await user.click(screen.getByRole("combobox", { name: "カテゴリーで絞り込む" }))
+		const optionNames = screen
+			.getAllByRole("option")
+			.map((option) => option.textContent?.replace(/\s+/g, ""))
+		await user.click(await screen.findByRole("option", { name: /未分類.*￥300/ }))
 
 		// Assert
 		expect(screen.getByText("その他")).toBeInTheDocument()
 		expect(screen.queryByText("昼食")).not.toBeInTheDocument()
-		expect(screen.getByRole("button", { name: "未分類" })).toHaveAttribute("aria-pressed", "true")
-		expect(screen.queryByRole("button", { name: "日用品" })).not.toBeInTheDocument()
+		expect(screen.getByRole("combobox", { name: "カテゴリーで絞り込む" })).toHaveTextContent(
+			"未分類",
+		)
+		expect(screen.getByRole("combobox", { name: "カテゴリーで絞り込む" })).toHaveTextContent(
+			"￥300",
+		)
+		expect(optionNames).toEqual(["すべて￥800", "食費￥500", "未分類￥300"])
+		expect(screen.queryByText("日用品")).not.toBeInTheDocument()
 	})
 
 	it("groups expenses from unavailable categories into one filter", async () => {
@@ -414,12 +424,12 @@ describe("expenses screen", () => {
 		await screen.findByText("旧費目の支出1")
 
 		// Act
-		await user.click(screen.getByRole("button", { name: "削除済みのカテゴリー" }))
+		await user.click(screen.getByRole("combobox", { name: "カテゴリーで絞り込む" }))
+		await user.click(await screen.findByRole("option", { name: /削除済みのカテゴリー/ }))
 
 		// Assert
-		expect(screen.getByRole("button", { name: "削除済みのカテゴリー" })).toHaveAttribute(
-			"aria-pressed",
-			"true",
+		expect(screen.getByRole("combobox", { name: /カテゴリー/ })).toHaveTextContent(
+			"削除済みのカテゴリー",
 		)
 		expect(screen.getByText("旧費目の支出1")).toBeInTheDocument()
 		expect(screen.getByText("旧費目の支出2")).toBeInTheDocument()
@@ -510,7 +520,7 @@ describe("expenses screen", () => {
 		// Act
 		await user.click(screen.getByRole("link", { name: /旧費目.*編集/ }))
 		await screen.findByRole("heading", { name: "支出を編集" })
-		expect(screen.getByRole("combobox", { name: "カテゴリー" })).toHaveTextContent(
+		expect(screen.getByRole("combobox", { name: /カテゴリー/ })).toHaveTextContent(
 			"削除済みのカテゴリー",
 		)
 		await user.clear(screen.getByLabelText("メモ（任意）"))

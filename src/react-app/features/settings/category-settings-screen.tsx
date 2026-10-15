@@ -108,11 +108,7 @@ export function CategorySettingsScreen() {
 	return (
 		<>
 			<title>{formatDocumentTitle(title)}</title>
-			<main
-				id="main-content"
-				tabIndex={-1}
-				className="mx-auto w-full max-w-md px-6 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-5"
-			>
+			<main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-md px-6 pb-8 pt-5">
 				<header className="grid min-h-11 grid-cols-[1fr_auto_1fr] items-center gap-2">
 					<Link
 						to="/settings"

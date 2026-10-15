@@ -65,7 +65,7 @@ function renderHome(fetch: typeof globalThis.fetch, initialPath = "/") {
 afterEach(() => vi.useRealTimers())
 
 describe("monthly home", () => {
-	it("shows current-month expenses and category spending", async () => {
+	it("shows the current-month total and a compact category share", async () => {
 		// Arrange
 		vi.useFakeTimers({ toFake: ["Date"] })
 		vi.setSystemTime(new Date("2026-10-05T00:00:00.000Z"))
@@ -73,7 +73,7 @@ describe("monthly home", () => {
 
 		// Act
 		renderHome(fetch)
-		await screen.findByRole("heading", { name: "カテゴリーごとの支出" })
+		await screen.findByRole("region", { name: "支出の内訳" })
 
 		// Assert
 		expect(screen.getByRole("heading", { name: "今月の家計" })).toBeInTheDocument()
@@ -81,32 +81,63 @@ describe("monthly home", () => {
 		expect(screen.getByText("未分類")).toBeInTheDocument()
 		expect(screen.queryByText("交通費")).not.toBeInTheDocument()
 		expect(screen.queryByRole("button", { name: "前の月" })).not.toBeInTheDocument()
-		expect(
-			screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent),
-		).toEqual(["最近の支出", "カテゴリーごとの支出"])
-		expect(screen.getByRole("link", { name: "すべてのカテゴリーを見る" })).toHaveAttribute(
-			"href",
-			"/expenses?month=2026-10#categories",
-		)
+		expect(screen.queryByRole("heading", { level: 2 })).not.toBeInTheDocument()
+		expect(screen.queryByText("最近の支出")).not.toBeInTheDocument()
+		expect(screen.getByText("￥10,500")).toBeInTheDocument()
 	})
 
-	it("shows categories with spending in the monthly details", async () => {
+	it("shows three leading categories and groups remaining spending into Other", async () => {
 		// Arrange
 		vi.useFakeTimers({ toFake: ["Date"] })
 		vi.setSystemTime(new Date("2026-10-05T00:00:00.000Z"))
-		const fetch = vi.fn<typeof globalThis.fetch>(async () => Response.json(CURRENT_OVERVIEW))
-		const user = userEvent.setup()
-		const router = renderHome(fetch)
-		await screen.findByRole("link", { name: "すべてのカテゴリーを見る" })
+		const overview: MonthlyOverview = {
+			...CURRENT_OVERVIEW,
+			totals: { expenses: 12_500 },
+			uncategorized: { expenses: 500 },
+			categories: [
+				{ ...CURRENT_OVERVIEW.categories[0], expenses: 8_000 },
+				{ ...CURRENT_OVERVIEW.categories[1], expenses: 2_000 },
+				{ ...CURRENT_OVERVIEW.categories[2], expenses: 1_000 },
+				{
+					id: "medical",
+					name: "医療費",
+					seedKey: "medical",
+					iconName: "heart-pulse",
+					expenses: 300,
+				},
+				{
+					id: "utilities",
+					name: "水道光熱費",
+					seedKey: "utilities",
+					iconName: "lightbulb",
+					expenses: 200,
+				},
+				{
+					id: "other",
+					name: "その他",
+					seedKey: "other",
+					iconName: "circle-ellipsis",
+					expenses: 500,
+				},
+			],
+		}
+		const fetch = vi.fn<typeof globalThis.fetch>(async () => Response.json(overview))
 
 		// Act
-		await user.click(screen.getByRole("link", { name: "すべてのカテゴリーを見る" }))
-		await screen.findByText("日用品")
+		renderHome(fetch)
+		await screen.findByText("その他")
 
 		// Assert
-		expect(router.state.location.pathname).toBe("/expenses")
-		expect(screen.getByRole("button", { name: "前の月" })).toBeInTheDocument()
-		expect(screen.queryByText("交通費")).not.toBeInTheDocument()
+		expect(screen.getByText("食費")).toBeInTheDocument()
+		expect(screen.getByText("日用品")).toBeInTheDocument()
+		expect(screen.getByText("交通費")).toBeInTheDocument()
+		expect(screen.queryByText("医療費")).not.toBeInTheDocument()
+		expect(screen.queryByText("未分類")).not.toBeInTheDocument()
+		expect(screen.getAllByText("その他")).toHaveLength(1)
+		expect(screen.getByText("￥8,000")).toBeInTheDocument()
+		expect(screen.getByText("￥1,500")).toBeInTheDocument()
+		expect(screen.queryByText("12%")).not.toBeInTheDocument()
+		expect(screen.queryByText("水道光熱費")).not.toBeInTheDocument()
 	})
 
 	it("reads a past month from monthly details without a write request", async () => {

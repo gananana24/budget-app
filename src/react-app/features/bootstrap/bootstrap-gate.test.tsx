@@ -26,7 +26,7 @@ describe("BootstrapGate", () => {
 		renderGate(bootstrap)
 
 		// Assert
-		expect(screen.getByRole("status")).toHaveTextContent("家計簿を準備しています")
+		expect(screen.getByRole("status")).toHaveTextContent("読み込み中")
 		expect(screen.queryByText("家計簿本体")).not.toBeInTheDocument()
 
 		// Assert
