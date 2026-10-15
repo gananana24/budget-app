@@ -78,7 +78,7 @@ task dev
 | `pnpm check` | Lint、型検査、テスト、ビルド、Workers dry-run |
 | `pnpm preview` | ビルド結果をローカルで確認 |
 | `pnpm cf-typegen` | Cloudflare Workersの型定義を生成 |
-| `pnpm deploy` | Cloudflare Workersへデプロイ |
+| `pnpm run deploy` | ビルドしてCloudflare Workersへデプロイ |
 
 ## データベース
 
@@ -121,7 +121,7 @@ task db:dump
 1. Clerk Dashboard の Development インスタンスで Google ログインを有効にし、不要な認証方法を無効にします。[Access mode の Allowlist](https://clerk.com/docs/guides/secure/restricting-access)には本人と家族の Google メールアドレスを**個別に**追加し、Open モードのまま「Enable allowlist」を有効にして保存します。空の Allowlist を有効にすると全員の新規登録が止まるため、２件が登録済みか確認します。メールアドレスをリポジトリや作業ログへ書かないでください。
 2. Neon の対象データベースに `db/migrations/` を適用します。接続 URL は Neon が示す**直接接続**の URL を使い、下の本番手順の `dbmate` コマンドで状態も確認します。Cloudflare Dashboard で同じ DB への Hyperdrive を作り、クエリキャッシュを無効にして、その ID を `wrangler.json` の `DATABASE` binding に設定します。
 3. Wrangler の `pnpm exec wrangler whoami` でアカウントを確認します。Git 管理対象外の `.env` に `VITE_CLERK_PUBLISHABLE_KEY=pk_test_...` を、`.env.family.secrets` に同じ `CLERK_PUBLISHABLE_KEY=pk_test_...` と対応する `CLERK_SECRET_KEY=sk_test_...` を設定します。後者の権限は `chmod 600 .env.family.secrets` とします。シークレットをソース、`VITE_` 変数、ログへ置かないでください。
-4. `pnpm check` を実行し、配信物に秘密鍵や DB 接続 URL がないことを確認します。初回は `pnpm exec wrangler deploy --secrets-file .env.family.secrets` で Worker と秘密値を同時に登録します。表示された `https://<worker名>.<サブドメイン>.workers.dev` を固定 URL として使います。更新時は `pnpm deploy` を使います。
+4. `pnpm check` を実行し、配信物に秘密鍵や DB 接続 URL がないことを確認します。初回は `pnpm exec wrangler deploy --secrets-file .env.family.secrets` で Worker と秘密値を同時に登録します。表示された `https://<worker名>.<サブドメイン>.workers.dev` を固定 URL として使います。更新時は `pnpm run deploy` を使います。
 5. 下の「公開後の確認」に沿って、両方の端末でログイン、支出・カテゴリー操作、ログアウト、ホーム画面からの起動を確認します。外部サービスの動作と実機表示は自動チェックだけでは保証できません。
 
 以前のスキーマを適用した**未利用の**Neon DBを作り直す場合は、まず利用者・家計・支出・カテゴリーの行がすべて 0 件であることを確認します。データがある DB にはこの手順を使いません。Neon CLI で対象 project・branch・database を確かめてから `neon databases delete <database> --project-id <project> --branch <branch>`、続けて `neon databases create --name <database> --owner-name <owner> --project-id <project> --branch <branch>` を実行し、現行の `db/migrations/` を直接接続 URL で最初から適用します。同じ名前・所有者を使い、Hyperdrive が同じ DB を指していることも確認します。
@@ -151,7 +151,7 @@ Cloudflare Worker自体は`<worker名>.<アカウントのサブドメイン>.wo
    rg -l 'sk_live_|postgres(ql)?://' dist/client
    ```
 
-初回デプロイ後は`pnpm deploy`でコードを更新できます。`wrangler secret put`は即時にWorkerの新しいバージョンをデプロイするため、既存公開環境でキーを変更するときは対象環境と変更タイミングを先に確認してください。`wrangler.json`のHyperdrive IDやドメインを別環境へ合わせて変更した場合は、`pnpm cf-typegen`でbinding型を再生成します。
+初回デプロイ後は`pnpm run deploy`でコードを更新できます。`wrangler secret put`は即時にWorkerの新しいバージョンをデプロイするため、既存公開環境でキーを変更するときは対象環境と変更タイミングを先に確認してください。`wrangler.json`のHyperdrive IDやドメインを別環境へ合わせて変更した場合は、`pnpm cf-typegen`でbinding型を再生成します。
 
 ### 公開後の確認
 
