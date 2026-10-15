@@ -1,11 +1,8 @@
 import { queryOptions } from "@tanstack/react-query"
-import type { InferResponseType } from "hono/client"
 import type { ApiClient } from "@/lib/api-client"
+import type { MonthlyOverviewResponse } from "../../../../shared/api/monthly-overview"
 
-export type MonthlyOverview = InferResponseType<
-	ApiClient["rpc"]["api"]["months"][":month"]["$get"],
-	200
->
+export type MonthlyOverview = MonthlyOverviewResponse
 export type MonthlyCategory = MonthlyOverview["categories"][number]
 export type MonthlyExpense = MonthlyOverview["expenses"][number]
 
@@ -16,12 +13,12 @@ export function monthlyOverviewQueryKey(month: string) {
 export function getMonthlyOverviewQueryOptions(apiClient: ApiClient, month: string) {
 	return queryOptions({
 		queryKey: monthlyOverviewQueryKey(month),
-		queryFn: async ({ signal }) => {
+		queryFn: async ({ signal }): Promise<MonthlyOverview> => {
 			const response = await apiClient.rpc.api.months[":month"].$get(
 				{ param: { month: encodeURIComponent(month) } },
 				{ init: { signal } },
 			)
-			return apiClient.unwrap(response)
+			return apiClient.unwrap<MonthlyOverview>(response)
 		},
 	})
 }

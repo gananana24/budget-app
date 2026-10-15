@@ -6,3 +6,13 @@ export const categoryWriteRequestSchema = z.object({
 })
 
 export type CategoryWriteRequest = Readonly<z.infer<typeof categoryWriteRequestSchema>>
+
+export type CategoryResponse = Readonly<{
+	id: string
+	name: string
+	iconName: string
+	isInitial: boolean
+	seedKey: string | null
+}>
+
+export type CategoriesResponse = Readonly<{ categories: readonly CategoryResponse[] }>

@@ -1,18 +1,17 @@
 import { queryOptions } from "@tanstack/react-query"
-import type { InferResponseType } from "hono/client"
+import type { CategoriesResponse, CategoryResponse } from "../../../../shared/api/category"
 import type { ApiClient } from "../../../lib/api-client"
 
-type CategoriesResponse = InferResponseType<ApiClient["rpc"]["api"]["categories"]["$get"], 200>
-export type Category = CategoriesResponse["categories"][number]
+export type Category = CategoryResponse
 
 export const categoriesQueryKey = ["categories"] as const
 
 export function getCategoriesQueryOptions(apiClient: ApiClient) {
 	return queryOptions({
 		queryKey: categoriesQueryKey,
-		queryFn: async ({ signal }) => {
+		queryFn: async ({ signal }): Promise<CategoriesResponse> => {
 			const response = await apiClient.rpc.api.categories.$get(undefined, { init: { signal } })
-			return apiClient.unwrap(response)
+			return apiClient.unwrap<CategoriesResponse>(response)
 		},
 	})
 }
