@@ -187,7 +187,7 @@ function EditExpenseForm({
 						type="submit"
 						size="lg"
 						disabled={mutation.isPending}
-						className="h-14 w-full rounded-xl bg-[var(--budget-primary)] text-base font-semibold text-white hover:bg-[var(--budget-primary)]/90"
+						className="h-14 w-full rounded-xl bg-[var(--budget-primary)] text-base font-semibold text-white active:brightness-90"
 					>
 						{mutation.isPending ? messages.expenses.saving() : messages.expenses.save()}
 					</Button>
@@ -202,7 +202,7 @@ function EditExpenseForm({
 						deletion.reset()
 						setDeleteOpen(true)
 					}}
-					className="min-h-11 w-full border-destructive/30 text-destructive hover:bg-destructive/5 hover:text-destructive"
+					className="min-h-11 w-full border-destructive/30 text-destructive active:bg-destructive/5"
 				>
 					<Trash2 aria-hidden="true" />
 					{messages.expenses.delete()}

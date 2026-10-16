@@ -17,7 +17,7 @@ function AppLayout() {
 			<a className="skip-link" href="#main-content">
 				{messages.action.skipToContent()}
 			</a>
-			<div id="app-scroll-region" className="min-h-0 flex-1 overflow-y-auto">
+			<div id="app-scroll-region" className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
 				<Outlet />
 			</div>
 			{isExpenseForm ? null : <BottomNavigation />}

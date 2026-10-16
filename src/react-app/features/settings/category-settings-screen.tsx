@@ -149,7 +149,7 @@ export function CategorySettingsScreen() {
 								<Button
 									type="submit"
 									disabled={creation.isPending}
-									className="min-h-11 bg-[var(--budget-primary)] text-white hover:bg-[var(--budget-primary)]/90"
+									className="min-h-11 bg-[var(--budget-primary)] text-white active:brightness-90"
 								>
 									<Plus aria-hidden="true" />
 									{messages.settings.addCategory()}

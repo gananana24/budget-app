@@ -4,7 +4,7 @@
 	--budget-line: var(--border);
 	--budget-primary: var(--primary);
 	--budget-primary-soft: var(--secondary);
-	--budget-primary-hover: #e5e9e5;
+	--budget-primary-pressed: #e5e9e5;
 	--budget-chart-1: #2f7d4e;
 	--budget-chart-2: #568d68;
 	--budget-chart-3: #76a187;
@@ -43,10 +43,10 @@
 	background-color: var(--budget-primary-soft);
 }
 
-.app-button:hover,
-.app-action-link:hover {
+.app-button:active,
+.app-action-link:active {
 	color: var(--budget-primary);
-	background-color: var(--budget-primary-hover);
+	background-color: var(--budget-primary-pressed);
 }
 
 .app-primary-action {
@@ -54,7 +54,7 @@
 	background-color: var(--budget-primary);
 }
 
-.app-primary-action:hover {
+.app-primary-action:active {
 	color: #fff;
 	background-color: #216e43;
 }
@@ -65,12 +65,33 @@
 	outline-color: var(--budget-primary);
 }
 
-.app-navigation-link:hover {
-	color: var(--budget-ink);
+.app-navigation-link.app-navigation-active,
+.app-navigation-link.app-navigation-active:active {
+	color: var(--budget-primary);
 }
 
-.app-navigation-active {
-	color: var(--budget-primary);
+.app-navigation-icon {
+	transition: background-color 150ms ease, transform 150ms ease;
+}
+
+.app-navigation-link,
+.app-primary-action,
+.app-action-link,
+.app-card[href] {
+	-webkit-tap-highlight-color: transparent;
+}
+
+.app-navigation-active .app-navigation-icon {
+	background: var(--budget-primary-soft);
+}
+
+.app-navigation-link:active .app-navigation-icon {
+	background: var(--budget-primary-soft);
+	transform: scale(0.92);
+}
+
+.app-card[href]:active {
+	filter: brightness(0.94);
 }
 
 .skip-link {

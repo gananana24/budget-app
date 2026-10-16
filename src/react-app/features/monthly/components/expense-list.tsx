@@ -78,7 +78,7 @@ export function ExpenseList({
 								to="/expenses/$expenseId/edit"
 								params={{ expenseId: expense.id }}
 								search={{ month: editMonth }}
-								className="flex min-h-18 items-center justify-between gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-[var(--budget-primary-soft)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--budget-primary)]"
+								className="flex min-h-18 items-center justify-between gap-3 rounded-xl px-3 py-3 transition-colors active:bg-[var(--budget-primary-soft)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--budget-primary)]"
 							>
 								<ExpenseRowContent
 									expense={expense}
