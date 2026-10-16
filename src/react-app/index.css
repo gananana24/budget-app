@@ -61,6 +61,12 @@ body {
 	min-height: 100dvh;
 }
 
+html:has(#app-scroll-region),
+body:has(#app-scroll-region) {
+	height: 100dvh;
+	overflow: hidden;
+}
+
 body {
 	margin: 0;
 }

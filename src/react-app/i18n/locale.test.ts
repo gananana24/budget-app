@@ -10,6 +10,24 @@ afterEach(() => {
 	setLocale("ja", { reload: false })
 })
 
+it.each(["ja", "en", "es"] as const)(
+	"shows each language in its own name when the current locale is %s",
+	(locale) => {
+		// Arrange
+		const languageNames = ["日本語", "English", "Español"]
+
+		// Act
+		setLocale(locale, { reload: false })
+
+		// Assert
+		expect([
+			messages.settings.languageJapanese(),
+			messages.settings.languageEnglish(),
+			messages.settings.languageSpanish(),
+		]).toEqual(languageNames)
+	},
+)
+
 it("displays English text, default category names, and Japanese yen formatting after selecting English", () => {
 	// Arrange
 	const initial = { name: "食費", seedKey: "food" }

@@ -202,7 +202,7 @@ function EditExpenseForm({
 						deletion.reset()
 						setDeleteOpen(true)
 					}}
-					className="min-h-11 w-full border-destructive/30 text-destructive active:bg-destructive/5"
+					className="min-h-11 w-full rounded-xl border-destructive text-destructive active:bg-destructive/5 active:text-destructive"
 				>
 					<Trash2 aria-hidden="true" />
 					{messages.expenses.delete()}
@@ -214,7 +214,7 @@ function EditExpenseForm({
 					if (!deletion.isPending) setDeleteOpen(open)
 				}}
 			>
-				<AlertDialogContent className="w-[calc(100%-2rem)] max-h-[calc(100dvh-2rem)] overflow-y-auto">
+				<AlertDialogContent>
 					<AlertDialogHeader>
 						<AlertDialogTitle>{messages.expenses.deleteTitle()}</AlertDialogTitle>
 						<AlertDialogDescription>
@@ -235,12 +235,12 @@ function EditExpenseForm({
 						</p>
 					) : null}
 					<AlertDialogFooter>
-						<AlertDialogCancel className="min-h-11" disabled={deletion.isPending}>
+						<AlertDialogCancel disabled={deletion.isPending}>
 							{messages.expenses.cancel()}
 						</AlertDialogCancel>
 						<AlertDialogAction
 							variant="destructive"
-							className="min-h-11"
+							className="bg-destructive text-white active:bg-destructive/90"
 							disabled={deletion.isPending}
 							onClick={() => deletion.mutate()}
 						>
