@@ -149,7 +149,7 @@ export function CategorySettingsScreen() {
 								<Button
 									type="submit"
 									disabled={creation.isPending}
-									className="min-h-11 bg-[var(--budget-primary)] text-white hover:bg-[var(--budget-primary)]/90"
+									className="min-h-11 bg-[var(--budget-primary)] text-white active:brightness-90"
 								>
 									<Plus aria-hidden="true" />
 									{messages.settings.addCategory()}
@@ -255,7 +255,7 @@ export function CategorySettingsScreen() {
 					}
 				}}
 			>
-				<AlertDialogContent className="w-[calc(100%-2rem)] max-h-[calc(100dvh-2rem)] overflow-y-auto">
+				<AlertDialogContent>
 					<AlertDialogHeader>
 						<AlertDialogTitle>
 							{messages.settings.deleteCategoryTitle({ name: deleteTarget?.name ?? "" })}
@@ -270,13 +270,13 @@ export function CategorySettingsScreen() {
 						</p>
 					) : null}
 					<AlertDialogFooter>
-						<AlertDialogCancel disabled={deletion.isPending} className="min-h-11">
+						<AlertDialogCancel disabled={deletion.isPending}>
 							{messages.settings.cancelCategory()}
 						</AlertDialogCancel>
 						<AlertDialogAction
 							variant="destructive"
 							disabled={deletion.isPending}
-							className="min-h-11"
+							className="bg-destructive text-white active:bg-destructive/90"
 							onClick={() => {
 								if (deleteTarget) deletion.mutate(deleteTarget.id)
 							}}

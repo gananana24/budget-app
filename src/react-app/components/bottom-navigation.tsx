@@ -27,10 +27,12 @@ export function BottomNavigation() {
 						<Link
 							to={to}
 							activeOptions={{ exact: to === "/" }}
-							className="app-navigation-link app-text-muted flex min-h-16 flex-col items-center justify-center gap-1 px-2 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px]"
+							className="app-navigation-link app-text-muted flex min-h-16 flex-col items-center justify-center gap-0.5 px-2 text-xs font-medium select-none focus-visible:outline-2 focus-visible:outline-offset-[-2px]"
 							activeProps={{ className: "app-navigation-active" }}
 						>
-							<Icon aria-hidden="true" className="size-5" strokeWidth={1.8} />
+							<span className="app-navigation-icon flex size-9 items-center justify-center rounded-full">
+								<Icon aria-hidden="true" className="size-5" strokeWidth={1.8} />
+							</span>
 							<span>{label}</span>
 						</Link>
 					</li>

@@ -133,7 +133,7 @@ export function NewExpenseScreen() {
 										type="submit"
 										size="lg"
 										disabled={mutation.isPending}
-										className="h-14 w-full rounded-xl bg-[var(--budget-primary)] text-base font-semibold text-white hover:bg-[var(--budget-primary)]/90"
+										className="h-14 w-full rounded-xl bg-[var(--budget-primary)] text-base font-semibold text-white active:brightness-90"
 									>
 										{mutation.isPending
 											? messages.expenses.submitting()

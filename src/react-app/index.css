@@ -61,8 +61,20 @@ body {
 	min-height: 100dvh;
 }
 
+html:has(#app-scroll-region),
+body:has(#app-scroll-region) {
+	height: 100dvh;
+	overflow: hidden;
+}
+
 body {
 	margin: 0;
+}
+
+a,
+button,
+[role="button"] {
+	touch-action: manipulation;
 }
 
 #root {
@@ -71,6 +83,10 @@ body {
 
 .bottom-navigation {
 	padding-bottom: env(safe-area-inset-bottom);
+}
+
+#app-scroll-region {
+	-webkit-overflow-scrolling: touch;
 }
 
 @media (min-width: 28rem) {
