@@ -6,6 +6,8 @@ import { messages } from "../../i18n/messages"
 function AppLayout() {
 	const pathname = useRouterState({ select: (state) => state.location.pathname })
 	const isExpenseForm = pathname === "/expenses/new" || /^\/expenses\/[^/]+\/edit$/.test(pathname)
+	const isSubscriptionForm =
+		pathname === "/subscriptions/new" || /^\/subscriptions\/[^/]+\/edit$/.test(pathname)
 
 	// pathname intentionally retriggers focus after client-side navigation.
 	useEffect(() => {
@@ -20,7 +22,7 @@ function AppLayout() {
 			<div id="app-scroll-region" className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
 				<Outlet />
 			</div>
-			{isExpenseForm ? null : <BottomNavigation />}
+			{isExpenseForm || isSubscriptionForm ? null : <BottomNavigation />}
 		</div>
 	)
 }

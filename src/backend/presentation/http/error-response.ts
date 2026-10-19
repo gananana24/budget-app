@@ -7,6 +7,7 @@ import { CategoryNotFoundError } from "../../domain/category/exceptions/category
 import { ExpenseCategoryNotFoundError } from "../../domain/expense/exceptions/expense-category-not-found-error"
 import { ExpenseNotFoundError } from "../../domain/expense/exceptions/expense-not-found-error"
 import { InvalidValueError } from "../../domain/shared/exceptions/invalid-value-error"
+import { SubscriptionNotFoundError } from "../../domain/subscription/subscription-not-found-error"
 import { type ErrorCode, errorMessage } from "./error-messages"
 
 type ErrorBody = Readonly<{
@@ -52,7 +53,8 @@ export function domainErrorResponse(error: unknown, context: Context): Response 
 	if (
 		error instanceof CategoryNotFoundError ||
 		error instanceof ExpenseCategoryNotFoundError ||
-		error instanceof ExpenseNotFoundError
+		error instanceof ExpenseNotFoundError ||
+		error instanceof SubscriptionNotFoundError
 	) {
 		return context.json(errorBody(context, "NOT_FOUND"), 404)
 	}

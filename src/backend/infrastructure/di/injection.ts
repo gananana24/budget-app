@@ -29,6 +29,17 @@ import { PostgresExpenseRepository } from "../postgres/expense/postgres-expense-
 import { PostgresHouseholdMembershipRepository } from "../postgres/household/postgres-household-membership-repository"
 import { PostgresHouseholdRepository } from "../postgres/household/postgres-household-repository"
 import { PostgresMonthlyOverviewRepository } from "../postgres/monthly/postgres-monthly-overview-repository"
+import { PostgresSubscriptionRepository } from "../postgres/subscription/postgres-subscription-repository"
+import {
+	DefaultCreateSubscriptionUseCase,
+	DefaultEndSubscriptionUseCase,
+	DefaultListSubscriptionsUseCase,
+	DefaultUpdateSubscriptionUseCase,
+	type CreateSubscriptionUseCase,
+	type EndSubscriptionUseCase,
+	type ListSubscriptionsUseCase,
+	type UpdateSubscriptionUseCase,
+} from "../../usecase/subscription/subscription-use-cases"
 import { PostgresUserRepository } from "../postgres/user/postgres-user-repository"
 
 type DatabaseEnv = Pick<Env, "DATABASE">
@@ -44,6 +55,10 @@ export type WorkerDependencies = Readonly<{
 	createCategoryUseCase: CreateCategoryUseCase
 	updateCategoryUseCase: UpdateCategoryUseCase
 	deleteCategoryUseCase: DeleteCategoryUseCase
+	listSubscriptionsUseCase: ListSubscriptionsUseCase
+	createSubscriptionUseCase: CreateSubscriptionUseCase
+	updateSubscriptionUseCase: UpdateSubscriptionUseCase
+	endSubscriptionUseCase: EndSubscriptionUseCase
 }>
 
 export function newWorkerDependencies(env: DatabaseEnv): WorkerDependencies {
@@ -127,6 +142,42 @@ export function newWorkerDependencies(env: DatabaseEnv): WorkerDependencies {
 			execute: (input) =>
 				withPostgresTransaction(connectionString, (client) =>
 					new DefaultDeleteCategoryUseCase(new PostgresCategoryRepository(client)).execute(input),
+				),
+		},
+		listSubscriptionsUseCase: {
+			execute: (authorization) =>
+				withPostgresClient(connectionString, (client) =>
+					new DefaultListSubscriptionsUseCase(
+						new PostgresSubscriptionRepository(client),
+						() => new Date(),
+					).execute(authorization),
+				),
+		},
+		createSubscriptionUseCase: {
+			execute: (input) =>
+				withPostgresTransaction(connectionString, (client) =>
+					new DefaultCreateSubscriptionUseCase(
+						new PostgresSubscriptionRepository(client),
+						() => new Date(),
+						() => crypto.randomUUID(),
+					).execute(input),
+				),
+		},
+		updateSubscriptionUseCase: {
+			execute: (input) =>
+				withPostgresTransaction(connectionString, (client) =>
+					new DefaultUpdateSubscriptionUseCase(
+						new PostgresSubscriptionRepository(client),
+						() => new Date(),
+					).execute(input),
+				),
+		},
+		endSubscriptionUseCase: {
+			execute: (input) =>
+				withPostgresTransaction(connectionString, (client) =>
+					new DefaultEndSubscriptionUseCase(new PostgresSubscriptionRepository(client)).execute(
+						input,
+					),
 				),
 		},
 	}
