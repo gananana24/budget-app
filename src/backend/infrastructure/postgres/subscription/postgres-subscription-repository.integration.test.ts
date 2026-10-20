@@ -4,6 +4,7 @@ import { SubscriptionNotFoundError } from "../../../domain/subscription/subscrip
 import { ClerkUserId } from "../../../domain/user/value-objects/clerk-user-id"
 import { DefaultBootstrapUseCase } from "../../../usecase/bootstrap/bootstrap-use-case"
 import { DefaultCreateCategoryUseCase } from "../../../usecase/category/create-category-use-case"
+import { DefaultDeleteCategoryUseCase } from "../../../usecase/category/delete-category-use-case"
 import {
 	DefaultCreateSubscriptionUseCase,
 	DefaultEndSubscriptionUseCase,
@@ -149,5 +150,41 @@ describe("subscriptions with PostgreSQL", () => {
 
 		// Assert
 		await expect(result).rejects.toBeInstanceOf(SubscriptionNotFoundError)
+	})
+
+	it("keeps a subscription after its custom category is deleted", async () => {
+		// Arrange
+		const owner = await bootstrap("clerk_subscription_deleted_category_owner")
+		const category = await withPostgresTransaction(DATABASE_URL, (client) =>
+			new DefaultCreateCategoryUseCase(new PostgresCategoryRepository(client)).execute({
+				authorization: owner,
+				name: "会費",
+				iconName: "tag",
+			}),
+		)
+		const created = await withPostgresTransaction(DATABASE_URL, (client) =>
+			new DefaultCreateSubscriptionUseCase(new PostgresSubscriptionRepository(client), now, () =>
+				crypto.randomUUID(),
+			).execute({ authorization: owner, details: { ...details, categoryId: category.id } }),
+		)
+
+		// Act
+		await withPostgresTransaction(DATABASE_URL, (client) =>
+			new DefaultDeleteCategoryUseCase(new PostgresCategoryRepository(client)).execute({
+				authorization: owner,
+				categoryId: category.id,
+			}),
+		)
+		const result = await withPostgresTransaction(DATABASE_URL, (client) =>
+			new DefaultListSubscriptionsUseCase(new PostgresSubscriptionRepository(client), now).execute(
+				owner,
+			),
+		)
+
+		// Assert
+		expect(result.subscriptions).toEqual([
+			expect.objectContaining({ id: created.id, categoryId: null }),
+		])
+		expect(result.monthlyTotal).toBe(6000)
 	})
 })
