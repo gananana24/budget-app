@@ -50,6 +50,52 @@ function renderExpenseFlow(
 }
 
 describe("expenses screen", () => {
+	it("shows a subscription source and links an active plan from its expense", async () => {
+		// Arrange
+		vi.useFakeTimers({ toFake: ["Date"] })
+		vi.setSystemTime(new Date("2026-10-05T00:00:00.000Z"))
+		const subscriptionId = "00000000-0000-4000-8000-000000000041"
+		const overview: MonthlyOverview = {
+			...EMPTY_OVERVIEW,
+			totals: { expenses: 6000 },
+			uncategorized: { expenses: 6000 },
+			expenses: [
+				{
+					id: "00000000-0000-4000-8000-000000000042",
+					date: "2026-10-05",
+					amount: 6000,
+					categoryId: null,
+					memo: "ジム会費",
+					createdAt: "2026-10-05T00:00:00Z",
+					updatedAt: "2026-10-05T00:00:00Z",
+					sourceSubscriptionId: subscriptionId,
+					sourceSubscriptionActive: true,
+				},
+			],
+		}
+		const client = createApiClient({
+			fetch: vi.fn<typeof globalThis.fetch>(async () => Response.json(overview)),
+			getToken: async () => "session-token",
+			networkErrorMessage: "通信エラー",
+			invalidResponseMessage: "応答エラー",
+		})
+		const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+		queryClient.setQueryData(["monthly-overview", "2026-10-01"], overview)
+		const user = userEvent.setup()
+		renderExpenseFlow(client, queryClient, "/expenses?month=2026-10")
+
+		// Act
+		const expenseLink = await screen.findByRole("link", { name: /ジム会費.*編集/ })
+		await user.click(expenseLink)
+
+		// Assert
+		expect(expenseLink).toHaveTextContent("サブスク")
+		expect(await screen.findByRole("link", { name: "元のサブスク設定を見る" })).toHaveAttribute(
+			"href",
+			`/subscriptions/${subscriptionId}/edit`,
+		)
+	})
+
 	it("hides category selection when the selected month has no expenses", async () => {
 		// Arrange
 		vi.useFakeTimers({ toFake: ["Date"] })

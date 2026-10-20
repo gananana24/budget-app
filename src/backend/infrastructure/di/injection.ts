@@ -31,6 +31,11 @@ import { PostgresHouseholdRepository } from "../postgres/household/postgres-hous
 import { PostgresMonthlyOverviewRepository } from "../postgres/monthly/postgres-monthly-overview-repository"
 import { PostgresSubscriptionRepository } from "../postgres/subscription/postgres-subscription-repository"
 import {
+	DefaultPostDueSubscriptionUseCase,
+	DefaultPostDueSubscriptionsUseCase,
+	type PostDueSubscriptionsUseCase,
+} from "../../usecase/subscription/post-due-subscriptions-use-case"
+import {
 	DefaultCreateSubscriptionUseCase,
 	DefaultEndSubscriptionUseCase,
 	DefaultListSubscriptionsUseCase,
@@ -43,6 +48,22 @@ import {
 import { PostgresUserRepository } from "../postgres/user/postgres-user-repository"
 
 type DatabaseEnv = Pick<Env, "DATABASE">
+
+export function newScheduledDependencies(env: DatabaseEnv): PostDueSubscriptionsUseCase {
+	const connectionString = env.DATABASE.connectionString
+	return new DefaultPostDueSubscriptionsUseCase(
+		() =>
+			withPostgresClient(connectionString, (client) =>
+				new PostgresSubscriptionRepository(client).findActiveIds(),
+			),
+		(id, today) =>
+			withPostgresTransaction(connectionString, (client) =>
+				new DefaultPostDueSubscriptionUseCase(new PostgresSubscriptionRepository(client), () =>
+					crypto.randomUUID(),
+				).execute(id, today),
+			),
+	)
+}
 
 export type WorkerDependencies = Readonly<{
 	bootstrapUseCase: BootstrapUseCase
@@ -165,20 +186,25 @@ export function newWorkerDependencies(env: DatabaseEnv): WorkerDependencies {
 		},
 		updateSubscriptionUseCase: {
 			execute: (input) =>
-				withPostgresTransaction(connectionString, (client) =>
-					new DefaultUpdateSubscriptionUseCase(
-						new PostgresSubscriptionRepository(client),
+				withPostgresTransaction(connectionString, (client) => {
+					const repository = new PostgresSubscriptionRepository(client)
+					return new DefaultUpdateSubscriptionUseCase(
+						repository,
 						() => new Date(),
-					).execute(input),
-				),
+						new DefaultPostDueSubscriptionUseCase(repository, () => crypto.randomUUID()),
+					).execute(input)
+				}),
 		},
 		endSubscriptionUseCase: {
 			execute: (input) =>
-				withPostgresTransaction(connectionString, (client) =>
-					new DefaultEndSubscriptionUseCase(new PostgresSubscriptionRepository(client)).execute(
-						input,
-					),
-				),
+				withPostgresTransaction(connectionString, (client) => {
+					const repository = new PostgresSubscriptionRepository(client)
+					return new DefaultEndSubscriptionUseCase(
+						repository,
+						new DefaultPostDueSubscriptionUseCase(repository, () => crypto.randomUUID()),
+						() => new Date(),
+					).execute(input)
+				}),
 		},
 	}
 }

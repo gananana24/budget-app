@@ -23,6 +23,7 @@
 			"localConnectionString": "postgresql://postgres:postgres@127.0.0.1:54322/budget_app_dev?sslmode=disable"
 		}
 	],
+	"triggers": { "crons": ["10 15 * * *"] },
 	"observability": {
 		"enabled": true,
 		"head_sampling_rate": 1,

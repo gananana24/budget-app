@@ -17,6 +17,8 @@ export type MonthlyExpenseRecord = Readonly<{
 	memo: string | null
 	createdAt: string
 	updatedAt: string
+	sourceSubscriptionId?: string | null
+	sourceSubscriptionActive?: boolean
 }>
 
 export type MonthlyOverviewRecord = Readonly<{

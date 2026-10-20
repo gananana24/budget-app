@@ -124,5 +124,8 @@
 	"subscriptionDayOption": "Día {day}",
 	"subscriptionAnnualMonth": "Cada {month}",
 	"subscriptionDeleteConfirm": "¿Eliminar esta suscripción?",
-	"subscriptionDeleteDescription": "Se quitará de la lista. Los gastos anteriores permanecerán."
+	"subscriptionDeleteDescription": "Se quitará de la lista. Los gastos anteriores permanecerán.",
+	"subscriptionSource": "Suscripción",
+	"subscriptionOpenSettings": "Ver ajustes de la suscripción",
+	"subscriptionAutoPostingNote": "Se añade un gasto automáticamente en cada fecha de pago. No se detectan duplicados introducidos manualmente."
 }

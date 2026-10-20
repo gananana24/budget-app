@@ -1,8 +1,9 @@
 import type { Client } from "pg"
-import type { HouseholdId } from "../../../domain/household/value-objects/household-id"
+import { HouseholdId } from "../../../domain/household/value-objects/household-id"
 import { SubscriptionNotFoundError } from "../../../domain/subscription/subscription-not-found-error"
 import { Subscription, type SubscriptionFields } from "../../../domain/subscription/subscription"
 import type { SubscriptionRepository } from "../../../domain/subscription/subscription-repository"
+import type { SubscriptionPostingRepository } from "../../../domain/subscription/subscription-posting-repository"
 
 const columns = `id::text AS id, household_id::text AS household_id, name, amount,
  category_id::text AS category_id, interval_unit, billing_month, billing_day, anchor_date::text AS anchor_date,
@@ -59,8 +60,79 @@ function translateCategoryError(error: unknown): never {
 	throw error
 }
 
-export class PostgresSubscriptionRepository implements SubscriptionRepository {
+export class PostgresSubscriptionRepository
+	implements SubscriptionRepository, SubscriptionPostingRepository
+{
 	constructor(private readonly client: Client) {}
+
+	async findActiveIds(): Promise<readonly string[]> {
+		const result = await this.client.query(
+			"SELECT id::text AS id FROM public.subscriptions WHERE ended_at IS NULL ORDER BY id",
+		)
+		return result.rows.map((row: Row) => {
+			if (typeof row.id !== "string") throw new Error("Invalid subscription id")
+			return row.id
+		})
+	}
+
+	async findLocked(id: string): Promise<Subscription | null> {
+		const result = await this.client.query(
+			`SELECT ${columns} FROM public.subscriptions WHERE id = $1::uuid AND ended_at IS NULL FOR UPDATE`,
+			[id],
+		)
+		if (result.rowCount !== 1) return null
+		const householdId = result.rows[0].household_id
+		if (typeof householdId !== "string") throw new Error("Invalid subscription household")
+		return read(result.rows[0], HouseholdId.from(householdId))
+	}
+
+	async post(
+		subscription: Subscription,
+		occurrence: Readonly<{ index: number; nominal: string; payment: string; nextNominal: string }>,
+		expenseId: string,
+	): Promise<void> {
+		const { fields } = subscription
+		await this.client.query(
+			`INSERT INTO public.expenses (id, household_id, category_id, expense_date, amount, memo)
+			 VALUES ($1::uuid, $2::uuid, $3::uuid, $4::date, $5, $6)`,
+			[
+				expenseId,
+				subscription.householdId.value,
+				fields.categoryId,
+				occurrence.payment,
+				fields.amount,
+				fields.name,
+			],
+		)
+		await this.client.query(
+			`INSERT INTO public.subscription_occurrences
+			 (subscription_id, household_id, schedule_version, occurrence_index, nominal_date, payment_date, expense_id)
+			 VALUES ($1::uuid, $2::uuid, $3, $4, $5::date, $6::date, $7::uuid)`,
+			[
+				subscription.id,
+				subscription.householdId.value,
+				subscription.scheduleVersion,
+				occurrence.index,
+				occurrence.nominal,
+				occurrence.payment,
+				expenseId,
+			],
+		)
+		const advanced = await this.client.query(
+			`UPDATE public.subscriptions SET occurrence_index = $4, next_nominal_date = $5::date, updated_at = now()
+			 WHERE id = $1::uuid AND household_id = $2::uuid AND schedule_version = $3
+			 AND occurrence_index = $6 AND ended_at IS NULL RETURNING id`,
+			[
+				subscription.id,
+				subscription.householdId.value,
+				subscription.scheduleVersion,
+				occurrence.index + 1,
+				occurrence.nextNominal,
+				occurrence.index,
+			],
+		)
+		if (advanced.rowCount !== 1) throw new Error("Subscription schedule changed while posting")
+	}
 
 	async findActive(householdId: HouseholdId): Promise<readonly Subscription[]> {
 		const result = await this.client.query(

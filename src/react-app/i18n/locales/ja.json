@@ -124,5 +124,8 @@
 	"subscriptionDayOption": "{day}日",
 	"subscriptionAnnualMonth": "毎年{month}",
 	"subscriptionDeleteConfirm": "このサブスクを削除しますか？",
-	"subscriptionDeleteDescription": "サブスクを一覧から削除します。過去の支出は残ります。"
+	"subscriptionDeleteDescription": "サブスクを一覧から削除します。過去の支出は残ります。",
+	"subscriptionSource": "サブスク",
+	"subscriptionOpenSettings": "元のサブスク設定を見る",
+	"subscriptionAutoPostingNote": "支払日になると支出へ自動登録します。手入力した支出との重複は自動判定しません。"
 }

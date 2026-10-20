@@ -198,6 +198,24 @@ CREATE TABLE public.schema_migrations (
 
 
 --
+-- Name: subscription_occurrences; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.subscription_occurrences (
+    subscription_id uuid NOT NULL,
+    household_id uuid NOT NULL,
+    schedule_version integer NOT NULL,
+    occurrence_index integer NOT NULL,
+    nominal_date date NOT NULL,
+    payment_date date NOT NULL,
+    expense_id uuid,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT subscription_occurrences_occurrence_index_check CHECK ((occurrence_index >= 0)),
+    CONSTRAINT subscription_occurrences_schedule_version_check CHECK ((schedule_version > 0))
+);
+
+
+--
 -- Name: subscriptions; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -314,6 +332,22 @@ ALTER TABLE ONLY public.schema_migrations
 
 
 --
+-- Name: subscription_occurrences subscription_occurrences_expense_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscription_occurrences
+    ADD CONSTRAINT subscription_occurrences_expense_id_key UNIQUE (expense_id);
+
+
+--
+-- Name: subscription_occurrences subscription_occurrences_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscription_occurrences
+    ADD CONSTRAINT subscription_occurrences_pkey PRIMARY KEY (subscription_id, schedule_version, occurrence_index);
+
+
+--
 -- Name: subscriptions subscriptions_household_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -378,6 +412,13 @@ CREATE INDEX expenses_household_date_idx ON public.expenses USING btree (househo
 --
 
 CREATE INDEX household_members_user_id_idx ON public.household_members USING btree (user_id);
+
+
+--
+-- Name: subscription_occurrences_household_payment_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX subscription_occurrences_household_payment_idx ON public.subscription_occurrences USING btree (household_id, payment_date);
 
 
 --
@@ -488,6 +529,22 @@ ALTER TABLE ONLY public.monthly_budgets
 
 
 --
+-- Name: subscription_occurrences subscription_occurrences_expense_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscription_occurrences
+    ADD CONSTRAINT subscription_occurrences_expense_id_fkey FOREIGN KEY (expense_id) REFERENCES public.expenses(id) ON DELETE SET NULL;
+
+
+--
+-- Name: subscription_occurrences subscription_occurrences_household_id_subscription_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscription_occurrences
+    ADD CONSTRAINT subscription_occurrences_household_id_subscription_id_fkey FOREIGN KEY (household_id, subscription_id) REFERENCES public.subscriptions(household_id, id) ON DELETE CASCADE;
+
+
+--
 -- Name: subscriptions subscriptions_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -517,4 +574,5 @@ ALTER TABLE ONLY public.subscriptions
 INSERT INTO public.schema_migrations (version) VALUES
     ('20260923015606'),
     ('20261008103500'),
-    ('20261019000000');
+    ('20261019000000'),
+    ('20261020000000');

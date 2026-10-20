@@ -422,6 +422,7 @@ function SubscriptionForm({
 							{save.error.message}
 						</p>
 					) : null}
+					<p className="app-text-muted text-sm">{messages.subscription.autoPostingNote()}</p>
 					<Button
 						type="submit"
 						size="lg"
