@@ -153,7 +153,7 @@ describe("settings category management", () => {
 
 		// Act
 		await user.click(screen.getByRole("button", { name: "ペットを削除" }))
-		await user.click(screen.getByRole("button", { name: "削除する" }))
+		await user.click(screen.getByRole("button", { name: "削除" }))
 
 		// Assert
 		await waitFor(() => expect(screen.queryByText("ペット")).not.toBeInTheDocument())

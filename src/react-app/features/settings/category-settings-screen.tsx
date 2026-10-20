@@ -2,16 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
 import { Check, ChevronLeft, Pencil, Plus, Trash2, X } from "lucide-react"
 import { type FormEvent, useState } from "react"
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "../../components/ui/alert-dialog"
+import { DeleteConfirmationDialog } from "../../components/delete-confirmation-dialog"
 import { Button, buttonVariants } from "../../components/ui/button"
 import { Input } from "../../components/ui/input"
 import { categoryDisplayName } from "../../i18n/category-name"
@@ -229,6 +220,7 @@ export function CategorySettingsScreen() {
 															className="text-destructive"
 															aria-label={messages.settings.deleteCategory({ name: category.name })}
 															onClick={() => {
+																deletion.reset()
 																setDeleteTarget(category)
 																setError(null)
 															}}
@@ -246,46 +238,22 @@ export function CategorySettingsScreen() {
 					) : null}
 				</section>
 			</main>
-			<AlertDialog
+			<DeleteConfirmationDialog
 				open={deleteTarget !== null}
 				onOpenChange={(open) => {
-					if (!open && !deletion.isPending) {
+					if (!open) {
 						setDeleteTarget(null)
 						setError(null)
 					}
 				}}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>
-							{messages.settings.deleteCategoryTitle({ name: deleteTarget?.name ?? "" })}
-						</AlertDialogTitle>
-						<AlertDialogDescription>
-							{messages.settings.deleteCategoryDescription()}
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					{deletion.isError ? (
-						<p role="alert" className="text-sm text-destructive">
-							{deletion.error.message}
-						</p>
-					) : null}
-					<AlertDialogFooter>
-						<AlertDialogCancel disabled={deletion.isPending}>
-							{messages.settings.cancelCategory()}
-						</AlertDialogCancel>
-						<AlertDialogAction
-							variant="destructive"
-							disabled={deletion.isPending}
-							className="bg-destructive text-white active:bg-destructive/90"
-							onClick={() => {
-								if (deleteTarget) deletion.mutate(deleteTarget.id)
-							}}
-						>
-							{messages.settings.confirmDeleteCategory()}
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+				title={messages.settings.deleteCategoryTitle({ name: deleteTarget?.name ?? "" })}
+				description={messages.settings.deleteCategoryDescription()}
+				error={deletion.error}
+				isPending={deletion.isPending}
+				onConfirm={() => {
+					if (deleteTarget) deletion.mutate(deleteTarget.id)
+				}}
+			/>
 		</>
 	)
 }
