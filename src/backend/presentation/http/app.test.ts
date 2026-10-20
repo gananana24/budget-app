@@ -24,6 +24,26 @@ function createAuthorizationContext(): AuthorizationContext {
 
 function unusedMonthlyDependencies() {
 	return {
+		listSubscriptionsUseCase: {
+			execute: async () => {
+				throw new Error("Subscription listing is not expected in this test")
+			},
+		},
+		createSubscriptionUseCase: {
+			execute: async () => {
+				throw new Error("Subscription creation is not expected in this test")
+			},
+		},
+		updateSubscriptionUseCase: {
+			execute: async () => {
+				throw new Error("Subscription update is not expected in this test")
+			},
+		},
+		endSubscriptionUseCase: {
+			execute: async () => {
+				throw new Error("Subscription end is not expected in this test")
+			},
+		},
 		listCategoriesUseCase: {
 			execute: async () => {
 				throw new Error("Category listing is not expected in this test")

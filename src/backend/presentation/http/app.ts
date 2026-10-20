@@ -10,6 +10,12 @@ import type { CreateExpenseUseCase } from "../../usecase/expense/create-expense-
 import type { DeleteExpenseUseCase } from "../../usecase/expense/delete-expense-use-case"
 import type { UpdateExpenseUseCase } from "../../usecase/expense/update-expense-use-case"
 import type { GetMonthlyOverviewUseCase } from "../../usecase/monthly/get-monthly-overview-use-case"
+import type {
+	CreateSubscriptionUseCase,
+	EndSubscriptionUseCase,
+	ListSubscriptionsUseCase,
+	UpdateSubscriptionUseCase,
+} from "../../usecase/subscription/subscription-use-cases"
 import type { HttpEnvironment } from "./authentication"
 import { BootstrapApiRouteHandler } from "./bootstrap/handlers/bootstrap-api-route-handler"
 import { CategoryApiRouteHandler } from "./category/handlers/category-api-route-handler"
@@ -17,6 +23,7 @@ import { domainErrorResponse, notFoundResponse, unexpectedErrorResponse } from "
 import { ChangeExpenseApiRouteHandler } from "./expense/handlers/change-expense-api-route-handler"
 import { CreateExpenseApiRouteHandler } from "./expense/handlers/create-expense-api-route-handler"
 import { GetMonthlyOverviewApiRouteHandler } from "./monthly/handlers/get-monthly-overview-api-route-handler"
+import { SubscriptionApiRouteHandler } from "./subscription/subscription-api-route-handler"
 
 type HttpAppDependencies = Readonly<{
 	authenticationMiddleware: readonly [
@@ -33,6 +40,10 @@ type HttpAppDependencies = Readonly<{
 	createCategoryUseCase: CreateCategoryUseCase
 	updateCategoryUseCase: UpdateCategoryUseCase
 	deleteCategoryUseCase: DeleteCategoryUseCase
+	listSubscriptionsUseCase: ListSubscriptionsUseCase
+	createSubscriptionUseCase: CreateSubscriptionUseCase
+	updateSubscriptionUseCase: UpdateSubscriptionUseCase
+	endSubscriptionUseCase: EndSubscriptionUseCase
 }>
 
 export function createHttpApp({
@@ -47,6 +58,10 @@ export function createHttpApp({
 	createCategoryUseCase,
 	updateCategoryUseCase,
 	deleteCategoryUseCase,
+	listSubscriptionsUseCase,
+	createSubscriptionUseCase,
+	updateSubscriptionUseCase,
+	endSubscriptionUseCase,
 }: HttpAppDependencies) {
 	const app = new Hono<HttpEnvironment>()
 
@@ -109,6 +124,16 @@ export function createHttpApp({
 				createCategoryUseCase,
 				updateCategoryUseCase,
 				deleteCategoryUseCase,
+			).registerRoutes(),
+		)
+		.route(
+			"/",
+			new SubscriptionApiRouteHandler(
+				resolveAuthorizationUseCase,
+				listSubscriptionsUseCase,
+				createSubscriptionUseCase,
+				updateSubscriptionUseCase,
+				endSubscriptionUseCase,
 			).registerRoutes(),
 		)
 	app.notFound(notFoundResponse)

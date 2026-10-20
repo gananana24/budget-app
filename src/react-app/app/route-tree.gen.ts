@@ -13,9 +13,12 @@ import { Route as AppRouteImport } from "./routes/_app"
 import { Route as AppIndexRouteImport } from "./routes/_app.index"
 import { Route as AppExpensesRouteImport } from "./routes/_app.expenses"
 import { Route as AppSettingsRouteImport } from "./routes/_app.settings"
+import { Route as AppSubscriptionsRouteImport } from "./routes/_app.subscriptions"
 import { Route as AppExpensesNewRouteImport } from "./routes/_app.expenses_.new"
 import { Route as AppSettingsCategoriesRouteImport } from "./routes/_app.settings_.categories"
+import { Route as AppSubscriptionsNewRouteImport } from "./routes/_app.subscriptions_.new"
 import { Route as AppExpensesExpenseIdEditRouteImport } from "./routes/_app.expenses_.$expenseId.edit"
+import { Route as AppSubscriptionsSubscriptionIdEditRouteImport } from "./routes/_app.subscriptions_.$subscriptionId.edit"
 
 const AppRoute = AppRouteImport.update({
   id: "/_app",
@@ -36,6 +39,11 @@ const AppSettingsRoute = AppSettingsRouteImport.update({
   path: "/settings",
   getParentRoute: () => AppRoute,
 } as any)
+const AppSubscriptionsRoute = AppSubscriptionsRouteImport.update({
+  id: "/subscriptions",
+  path: "/subscriptions",
+  getParentRoute: () => AppRoute,
+} as any)
 const AppExpensesNewRoute = AppExpensesNewRouteImport.update({
   id: "/expenses_/new",
   path: "/expenses/new",
@@ -46,10 +54,21 @@ const AppSettingsCategoriesRoute = AppSettingsCategoriesRouteImport.update({
   path: "/settings/categories",
   getParentRoute: () => AppRoute,
 } as any)
+const AppSubscriptionsNewRoute = AppSubscriptionsNewRouteImport.update({
+  id: "/subscriptions_/new",
+  path: "/subscriptions/new",
+  getParentRoute: () => AppRoute,
+} as any)
 const AppExpensesExpenseIdEditRoute =
   AppExpensesExpenseIdEditRouteImport.update({
     id: "/expenses_/$expenseId/edit",
     path: "/expenses/$expenseId/edit",
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppSubscriptionsSubscriptionIdEditRoute =
+  AppSubscriptionsSubscriptionIdEditRouteImport.update({
+    id: "/subscriptions_/$subscriptionId/edit",
+    path: "/subscriptions/$subscriptionId/edit",
     getParentRoute: () => AppRoute,
   } as any)
 
@@ -57,27 +76,36 @@ export interface FileRoutesByFullPath {
   "/": typeof AppIndexRoute
   "/expenses": typeof AppExpensesRoute
   "/settings": typeof AppSettingsRoute
+  "/subscriptions": typeof AppSubscriptionsRoute
   "/expenses/new": typeof AppExpensesNewRoute
   "/settings/categories": typeof AppSettingsCategoriesRoute
+  "/subscriptions/new": typeof AppSubscriptionsNewRoute
   "/expenses/$expenseId/edit": typeof AppExpensesExpenseIdEditRoute
+  "/subscriptions/$subscriptionId/edit": typeof AppSubscriptionsSubscriptionIdEditRoute
 }
 export interface FileRoutesByTo {
   "/expenses": typeof AppExpensesRoute
   "/settings": typeof AppSettingsRoute
+  "/subscriptions": typeof AppSubscriptionsRoute
   "/": typeof AppIndexRoute
   "/expenses/new": typeof AppExpensesNewRoute
   "/settings/categories": typeof AppSettingsCategoriesRoute
+  "/subscriptions/new": typeof AppSubscriptionsNewRoute
   "/expenses/$expenseId/edit": typeof AppExpensesExpenseIdEditRoute
+  "/subscriptions/$subscriptionId/edit": typeof AppSubscriptionsSubscriptionIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   "/_app": typeof AppRouteWithChildren
   "/_app/expenses": typeof AppExpensesRoute
   "/_app/settings": typeof AppSettingsRoute
+  "/_app/subscriptions": typeof AppSubscriptionsRoute
   "/_app/": typeof AppIndexRoute
   "/_app/expenses_/new": typeof AppExpensesNewRoute
   "/_app/settings_/categories": typeof AppSettingsCategoriesRoute
+  "/_app/subscriptions_/new": typeof AppSubscriptionsNewRoute
   "/_app/expenses_/$expenseId/edit": typeof AppExpensesExpenseIdEditRoute
+  "/_app/subscriptions_/$subscriptionId/edit": typeof AppSubscriptionsSubscriptionIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -85,26 +113,35 @@ export interface FileRouteTypes {
     | "/"
     | "/expenses"
     | "/settings"
+    | "/subscriptions"
     | "/expenses/new"
     | "/settings/categories"
+    | "/subscriptions/new"
     | "/expenses/$expenseId/edit"
+    | "/subscriptions/$subscriptionId/edit"
   fileRoutesByTo: FileRoutesByTo
   to:
     | "/expenses"
     | "/settings"
+    | "/subscriptions"
     | "/"
     | "/expenses/new"
     | "/settings/categories"
+    | "/subscriptions/new"
     | "/expenses/$expenseId/edit"
+    | "/subscriptions/$subscriptionId/edit"
   id:
     | "__root__"
     | "/_app"
     | "/_app/expenses"
     | "/_app/settings"
+    | "/_app/subscriptions"
     | "/_app/"
     | "/_app/expenses_/new"
     | "/_app/settings_/categories"
+    | "/_app/subscriptions_/new"
     | "/_app/expenses_/$expenseId/edit"
+    | "/_app/subscriptions_/$subscriptionId/edit"
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -141,6 +178,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AppSettingsRouteImport
       parentRoute: typeof AppRoute
     }
+    "/_app/subscriptions": {
+      id: "/_app/subscriptions"
+      path: "/subscriptions"
+      fullPath: "/subscriptions"
+      preLoaderRoute: typeof AppSubscriptionsRouteImport
+      parentRoute: typeof AppRoute
+    }
     "/_app/expenses_/new": {
       id: "/_app/expenses_/new"
       path: "/expenses/new"
@@ -155,11 +199,25 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AppSettingsCategoriesRouteImport
       parentRoute: typeof AppRoute
     }
+    "/_app/subscriptions_/new": {
+      id: "/_app/subscriptions_/new"
+      path: "/subscriptions/new"
+      fullPath: "/subscriptions/new"
+      preLoaderRoute: typeof AppSubscriptionsNewRouteImport
+      parentRoute: typeof AppRoute
+    }
     "/_app/expenses_/$expenseId/edit": {
       id: "/_app/expenses_/$expenseId/edit"
       path: "/expenses/$expenseId/edit"
       fullPath: "/expenses/$expenseId/edit"
       preLoaderRoute: typeof AppExpensesExpenseIdEditRouteImport
+      parentRoute: typeof AppRoute
+    }
+    "/_app/subscriptions_/$subscriptionId/edit": {
+      id: "/_app/subscriptions_/$subscriptionId/edit"
+      path: "/subscriptions/$subscriptionId/edit"
+      fullPath: "/subscriptions/$subscriptionId/edit"
+      preLoaderRoute: typeof AppSubscriptionsSubscriptionIdEditRouteImport
       parentRoute: typeof AppRoute
     }
   }
@@ -168,19 +226,26 @@ declare module "@tanstack/react-router" {
 interface AppRouteChildren {
   AppExpensesRoute: typeof AppExpensesRoute
   AppSettingsRoute: typeof AppSettingsRoute
+  AppSubscriptionsRoute: typeof AppSubscriptionsRoute
   AppIndexRoute: typeof AppIndexRoute
   AppExpensesNewRoute: typeof AppExpensesNewRoute
   AppSettingsCategoriesRoute: typeof AppSettingsCategoriesRoute
+  AppSubscriptionsNewRoute: typeof AppSubscriptionsNewRoute
   AppExpensesExpenseIdEditRoute: typeof AppExpensesExpenseIdEditRoute
+  AppSubscriptionsSubscriptionIdEditRoute: typeof AppSubscriptionsSubscriptionIdEditRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppExpensesRoute: AppExpensesRoute,
   AppSettingsRoute: AppSettingsRoute,
+  AppSubscriptionsRoute: AppSubscriptionsRoute,
   AppIndexRoute: AppIndexRoute,
   AppExpensesNewRoute: AppExpensesNewRoute,
   AppSettingsCategoriesRoute: AppSettingsCategoriesRoute,
+  AppSubscriptionsNewRoute: AppSubscriptionsNewRoute,
   AppExpensesExpenseIdEditRoute: AppExpensesExpenseIdEditRoute,
+  AppSubscriptionsSubscriptionIdEditRoute:
+    AppSubscriptionsSubscriptionIdEditRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

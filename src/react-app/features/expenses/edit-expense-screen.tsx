@@ -2,16 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router"
 import { ChevronLeft, Trash2 } from "lucide-react"
 import { type FormEvent, useState } from "react"
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "../../components/ui/alert-dialog"
+import { DeleteConfirmationDialog } from "../../components/delete-confirmation-dialog"
 import { Button, buttonVariants } from "../../components/ui/button"
 import { FieldGroup } from "../../components/ui/field"
 import { categoryDisplayName } from "../../i18n/category-name"
@@ -208,47 +199,23 @@ function EditExpenseForm({
 					{messages.expenses.delete()}
 				</Button>
 			</div>
-			<AlertDialog
+			<DeleteConfirmationDialog
 				open={deleteOpen}
-				onOpenChange={(open) => {
-					if (!deletion.isPending) setDeleteOpen(open)
-				}}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>{messages.expenses.deleteTitle()}</AlertDialogTitle>
-						<AlertDialogDescription>
-							{messages.expenses.deleteDescription({
-								name:
-									expense.memo ??
-									(expenseCategory
-										? categoryDisplayName(expenseCategory)
-										: messages.monthly.uncategorized()),
-								date: formatDate(expense.date),
-								amount: formatYen(expense.amount),
-							})}
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					{deletion.isError ? (
-						<p role="alert" className="text-sm text-destructive">
-							{deletion.error.message}
-						</p>
-					) : null}
-					<AlertDialogFooter>
-						<AlertDialogCancel disabled={deletion.isPending}>
-							{messages.expenses.cancel()}
-						</AlertDialogCancel>
-						<AlertDialogAction
-							variant="destructive"
-							className="bg-destructive text-white active:bg-destructive/90"
-							disabled={deletion.isPending}
-							onClick={() => deletion.mutate()}
-						>
-							{deletion.isPending ? messages.expenses.deleting() : messages.expenses.delete()}
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+				onOpenChange={setDeleteOpen}
+				title={messages.expenses.deleteTitle()}
+				description={messages.expenses.deleteDescription({
+					name:
+						expense.memo ??
+						(expenseCategory
+							? categoryDisplayName(expenseCategory)
+							: messages.monthly.uncategorized()),
+					date: formatDate(expense.date),
+					amount: formatYen(expense.amount),
+				})}
+				error={deletion.error}
+				isPending={deletion.isPending}
+				onConfirm={() => deletion.mutate()}
+			/>
 		</>
 	)
 }

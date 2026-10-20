@@ -21,6 +21,10 @@ export default {
 			createCategoryUseCase: dependencies.createCategoryUseCase,
 			updateCategoryUseCase: dependencies.updateCategoryUseCase,
 			deleteCategoryUseCase: dependencies.deleteCategoryUseCase,
+			listSubscriptionsUseCase: dependencies.listSubscriptionsUseCase,
+			createSubscriptionUseCase: dependencies.createSubscriptionUseCase,
+			updateSubscriptionUseCase: dependencies.updateSubscriptionUseCase,
+			endSubscriptionUseCase: dependencies.endSubscriptionUseCase,
 		})
 
 		return await app.fetch(request, env, executionContext)

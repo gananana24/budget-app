@@ -103,6 +103,18 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
+-- Name: budget_periods; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.budget_periods (
+    household_id uuid NOT NULL,
+    month_start date NOT NULL,
+    initialized_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT budget_periods_month_start_check CHECK ((EXTRACT(day FROM month_start) = (1)::numeric))
+);
+
+
+--
 -- Name: categories; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -161,11 +173,60 @@ CREATE TABLE public.households (
 
 
 --
+-- Name: monthly_budgets; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.monthly_budgets (
+    household_id uuid NOT NULL,
+    month_start date NOT NULL,
+    category_id uuid NOT NULL,
+    amount integer NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT monthly_budgets_amount_check CHECK (((amount >= 0) AND (amount <= 2147483647))),
+    CONSTRAINT monthly_budgets_month_start_check CHECK ((EXTRACT(day FROM month_start) = (1)::numeric))
+);
+
+
+--
 -- Name: schema_migrations; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.schema_migrations (
     version character varying NOT NULL
+);
+
+
+--
+-- Name: subscriptions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.subscriptions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    household_id uuid NOT NULL,
+    name text NOT NULL,
+    amount integer NOT NULL,
+    category_id uuid,
+    interval_unit text NOT NULL,
+    anchor_date date NOT NULL,
+    next_nominal_date date NOT NULL,
+    occurrence_index integer DEFAULT 0 NOT NULL,
+    schedule_version integer DEFAULT 1 NOT NULL,
+    holiday_adjustment text DEFAULT 'none'::text NOT NULL,
+    ended_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    billing_month integer,
+    billing_day integer NOT NULL,
+    CONSTRAINT subscriptions_amount_check CHECK (((amount >= 1) AND (amount <= 2147483647))),
+    CONSTRAINT subscriptions_billing_day_check CHECK (((billing_day >= 1) AND (billing_day <= 31))),
+    CONSTRAINT subscriptions_billing_month_check CHECK (((billing_month >= 1) AND (billing_month <= 12))),
+    CONSTRAINT subscriptions_billing_month_required_check CHECK ((((interval_unit = 'month'::text) AND (billing_month IS NULL)) OR ((interval_unit = 'year'::text) AND (billing_month IS NOT NULL)))),
+    CONSTRAINT subscriptions_holiday_adjustment_check CHECK ((holiday_adjustment = ANY (ARRAY['none'::text, 'previous'::text, 'next'::text]))),
+    CONSTRAINT subscriptions_interval_unit_check CHECK ((interval_unit = ANY (ARRAY['month'::text, 'year'::text]))),
+    CONSTRAINT subscriptions_name_check CHECK ((((char_length(name) >= 1) AND (char_length(name) <= 50)) AND (name = btrim(name)))),
+    CONSTRAINT subscriptions_occurrence_index_check CHECK ((occurrence_index >= 0)),
+    CONSTRAINT subscriptions_schedule_version_check CHECK ((schedule_version > 0))
 );
 
 
@@ -178,6 +239,14 @@ CREATE TABLE public.users (
     clerk_user_id text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
+
+
+--
+-- Name: budget_periods budget_periods_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.budget_periods
+    ADD CONSTRAINT budget_periods_pkey PRIMARY KEY (household_id, month_start);
 
 
 --
@@ -229,11 +298,35 @@ ALTER TABLE ONLY public.households
 
 
 --
+-- Name: monthly_budgets monthly_budgets_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.monthly_budgets
+    ADD CONSTRAINT monthly_budgets_pkey PRIMARY KEY (household_id, month_start, category_id);
+
+
+--
 -- Name: schema_migrations schema_migrations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.schema_migrations
     ADD CONSTRAINT schema_migrations_pkey PRIMARY KEY (version);
+
+
+--
+-- Name: subscriptions subscriptions_household_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscriptions
+    ADD CONSTRAINT subscriptions_household_id_id_key UNIQUE (household_id, id);
+
+
+--
+-- Name: subscriptions subscriptions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscriptions
+    ADD CONSTRAINT subscriptions_pkey PRIMARY KEY (id);
 
 
 --
@@ -288,6 +381,13 @@ CREATE INDEX household_members_user_id_idx ON public.household_members USING btr
 
 
 --
+-- Name: subscriptions_active_household_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX subscriptions_active_household_idx ON public.subscriptions USING btree (household_id, next_nominal_date) WHERE (ended_at IS NULL);
+
+
+--
 -- Name: categories categories_protect_invariants; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -299,6 +399,28 @@ CREATE TRIGGER categories_protect_invariants BEFORE INSERT OR DELETE OR UPDATE O
 --
 
 CREATE TRIGGER expenses_ensure_category_available BEFORE INSERT OR UPDATE OF household_id, category_id ON public.expenses FOR EACH ROW EXECUTE FUNCTION public.ensure_category_available_to_household();
+
+
+--
+-- Name: monthly_budgets monthly_budgets_ensure_category_available; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER monthly_budgets_ensure_category_available BEFORE INSERT OR UPDATE OF household_id, category_id ON public.monthly_budgets FOR EACH ROW EXECUTE FUNCTION public.ensure_category_available_to_household();
+
+
+--
+-- Name: subscriptions subscriptions_ensure_category_available; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER subscriptions_ensure_category_available BEFORE INSERT OR UPDATE OF household_id, category_id ON public.subscriptions FOR EACH ROW EXECUTE FUNCTION public.ensure_category_available_to_household();
+
+
+--
+-- Name: budget_periods budget_periods_household_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.budget_periods
+    ADD CONSTRAINT budget_periods_household_id_fkey FOREIGN KEY (household_id) REFERENCES public.households(id) ON DELETE CASCADE;
 
 
 --
@@ -350,6 +472,38 @@ ALTER TABLE ONLY public.households
 
 
 --
+-- Name: monthly_budgets monthly_budgets_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.monthly_budgets
+    ADD CONSTRAINT monthly_budgets_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.categories(id) ON DELETE CASCADE;
+
+
+--
+-- Name: monthly_budgets monthly_budgets_household_id_month_start_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.monthly_budgets
+    ADD CONSTRAINT monthly_budgets_household_id_month_start_fkey FOREIGN KEY (household_id, month_start) REFERENCES public.budget_periods(household_id, month_start) ON DELETE CASCADE;
+
+
+--
+-- Name: subscriptions subscriptions_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscriptions
+    ADD CONSTRAINT subscriptions_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.categories(id) ON DELETE SET NULL;
+
+
+--
+-- Name: subscriptions subscriptions_household_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscriptions
+    ADD CONSTRAINT subscriptions_household_id_fkey FOREIGN KEY (household_id) REFERENCES public.households(id) ON DELETE CASCADE;
+
+
+--
 -- PostgreSQL database dump complete
 --
 
@@ -362,4 +516,5 @@ ALTER TABLE ONLY public.households
 
 INSERT INTO public.schema_migrations (version) VALUES
     ('20260923015606'),
-    ('20261008103500');
+    ('20261008103500'),
+    ('20261019000000');

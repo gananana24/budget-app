@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { Screen } from "../../components/screen"
+import { EmptyAddHint } from "../../components/empty-add-hint"
 import { Button } from "../../components/ui/button"
 import { formatMonth, getCurrentMonthStartInTokyo } from "../../i18n/format"
 import { formatDocumentTitle, messages } from "../../i18n/messages"
@@ -18,12 +19,7 @@ export function HomeScreen() {
 	return (
 		<>
 			<title>{formatDocumentTitle(title)}</title>
-			<Screen
-				title={title}
-				primaryAction={
-					<AddExpenseAction month={month} showLabel={query.data?.totals.expenses === 0} />
-				}
-			>
+			<Screen title={title} primaryAction={<AddExpenseAction month={month} />}>
 				<p className="app-text-muted text-sm tabular-nums">{formatMonth(month)}</p>
 				{query.isPending ? (
 					<p role="status" className="app-text-muted py-12 text-sm">
@@ -46,6 +42,9 @@ export function HomeScreen() {
 				{query.data ? (
 					<>
 						<MonthlyTotals overview={query.data} className="app-total-card mt-4 p-6" />
+						{query.data.totals.expenses === 0 ? (
+							<EmptyAddHint message={messages.expenses.emptyHint()} />
+						) : null}
 						{query.data.totals.expenses > 0 ? (
 							<section aria-label={messages.home.categoriesTitle()}>
 								<CategoryShareChart overview={query.data} />
