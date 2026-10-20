@@ -95,7 +95,7 @@ curl 'http://localhost:8787/__scheduled?cron=10+15+*+*+*'
 | `pnpm check` | Lint、型検査、テスト、ビルド、Workers dry-run |
 | `pnpm preview` | ビルド結果をローカルで確認 |
 | `pnpm cf-typegen` | Cloudflare Workersの型定義を生成 |
-| `pnpm run deploy` | ビルドしてCloudflare Workersへデプロイ |
+| `pnpm run deploy` | 本番DBのmigrationを確認・適用してからCloudflare Workersへデプロイ |
 
 ## データベース
 
@@ -136,9 +136,9 @@ task db:dump
 独自ドメインを使わず、Clerk の Development インスタンスと Cloudflare の既定 `*.workers.dev` URL で公開する手順です。Google ログインを含む操作を家族の端末で確認できます。ただし、[Clerk は Development インスタンスを本番用途に適さないと説明しています](https://clerk.com/docs/guides/development/managing-environments)。利用者が２人でも認証環境の性質は変わりません。URL を共有相手にだけ伝えてもアクセス制御にはなりません。長期運用の本番受け入れ条件は、この公開だけでは満たしません。
 
 1. Clerk Dashboard の Development インスタンスで Google ログインを有効にし、不要な認証方法を無効にします。[Access mode の Allowlist](https://clerk.com/docs/guides/secure/restricting-access)には本人と家族の Google メールアドレスを**個別に**追加し、Open モードのまま「Enable allowlist」を有効にして保存します。空の Allowlist を有効にすると全員の新規登録が止まるため、２件が登録済みか確認します。メールアドレスをリポジトリや作業ログへ書かないでください。
-2. Neon の対象データベースに `db/migrations/` を適用します。接続 URL は Neon が示す**直接接続**の URL を使い、下の本番手順の `dbmate` コマンドで状態も確認します。Cloudflare Dashboard で同じ DB への Hyperdrive を作り、クエリキャッシュを無効にして、その ID を `wrangler.json` の `DATABASE` binding に設定します。
+2. Neon の対象データベースへの**直接接続**URLを用意します。Cloudflare Dashboard で同じ DB への Hyperdrive を作り、クエリキャッシュを無効にして、その ID を `wrangler.json` の `DATABASE` binding に設定します。migration は手順4の `pnpm run deploy` が適用します。
 3. Wrangler の `pnpm exec wrangler whoami` でアカウントを確認します。Git 管理対象外の `.env` に `VITE_CLERK_PUBLISHABLE_KEY=pk_test_...` を、`.env.family.secrets` に同じ `CLERK_PUBLISHABLE_KEY=pk_test_...` と対応する `CLERK_SECRET_KEY=sk_test_...` を設定します。後者の権限は `chmod 600 .env.family.secrets` とします。シークレットをソース、`VITE_` 変数、ログへ置かないでください。
-4. `pnpm check` を実行し、配信物に秘密鍵や DB 接続 URL がないことを確認します。初回は `pnpm exec wrangler deploy --secrets-file .env.family.secrets` で Worker と秘密値を同時に登録します。表示された `https://<worker名>.<サブドメイン>.workers.dev` を固定 URL として使います。更新時は `pnpm run deploy` を使います。
+4. 下の「DBを含むデプロイ」に従って `.env.deploy.local` を用意し、`pnpm check` の後に `pnpm run deploy` を実行します。初回は`WORKER_SECRETS_FILE=.env.family.secrets pnpm run deploy`でWorkerのsecretも同時に登録します。公開URLで動作を確認します。
 5. 下の「公開後の確認」に沿って、両方の端末でログイン、支出・カテゴリー操作、ログアウト、ホーム画面からの起動を確認します。外部サービスの動作と実機表示は自動チェックだけでは保証できません。
 
 以前のスキーマを適用した**未利用の**Neon DBを作り直す場合は、まず利用者・家計・支出・カテゴリーの行がすべて 0 件であることを確認します。データがある DB にはこの手順を使いません。Neon CLI で対象 project・branch・database を確かめてから `neon databases delete <database> --project-id <project> --branch <branch>`、続けて `neon databases create --name <database> --owner-name <owner> --project-id <project> --branch <branch>` を実行し、現行の `db/migrations/` を直接接続 URL で最初から適用します。同じ名前・所有者を使い、Hyperdrive が同じ DB を指していることも確認します。
@@ -150,25 +150,33 @@ task db:dump
 Cloudflare Worker自体は`<worker名>.<アカウントのサブドメイン>.workers.dev`で公開できます。ただし、[Clerkの本番インスタンスには所有するドメインとDNSレコードが必要](https://clerk.com/docs/guides/development/deployment/production)です。`workers.dev`だけを使う場合、この節のClerk本番設定と本番Googleログインの受け入れ条件は完了できません。Clerkの開発インスタンスを使った公開は検証用に限り、家計データを扱う本番運用として扱いません。
 
 1. [Clerkの本番インスタンス](https://clerk.com/docs/guides/development/deployment/production)を作成し、本番ドメインとClerkが示すDNSレコードを設定します。[Google接続](https://clerk.com/docs/guides/configure/auth-strategies/social-connections/google)に本番用OAuthクライアントID・シークレットを登録し、Google以外のログイン方式を無効にします。Google側の公開状態と許可済みリダイレクトURIも確認します。Clerk本番の`pk_live_...`と`sk_live_...`を取得します。
-2. Neonで本番用PostgreSQLデータベースを用意します。Neonの接続情報から、マイグレーション用の**直接接続**URLを安全な保管場所に置きます。`db/migrations/`は本番DBへ明示的に適用します。zshでは次のように一時的に読み込み、適用状態を確認します。入力時のURLは画面にもシェル履歴にも表示されません。`task db:migrate`はローカルDB専用です。
-
-   ```zsh
-   read -rs "DATABASE_URL?Neon direct URL: "
-   echo
-   export DATABASE_URL
-   pnpm exec dbmate --no-dump-schema up
-   pnpm exec dbmate --no-dump-schema status
-   unset DATABASE_URL
-   ```
+2. Neonで本番用PostgreSQLデータベースを用意します。Neonの**直接接続**URLを用意し、下の「DBを含むデプロイ」でmigrationを適用します。`task db:migrate`はローカルDB専用です。
 3. Cloudflare DashboardでNeonへのHyperdrive接続を作成し、クエリキャッシュを無効にします。`wrangler.json`の`hyperdrive[0].id`をその接続IDに置き換え、binding名`DATABASE`を維持します。現行のIDは別環境で作られた接続を指すため、新しいCloudflareアカウントではそのまま使えません。HyperdriveにはNeonの接続情報をCloudflare側で登録し、DB接続文字列をソースへ置きません。
 4. Cloudflareの対象アカウントへWranglerでログインし、`pnpm exec wrangler whoami`で対象を確認します。Git管理対象外の`.env.production.secrets`を`touch .env.production.secrets && chmod 600 .env.production.secrets`で作成し、`CLERK_PUBLISHABLE_KEY=pk_live_...`と`CLERK_SECRET_KEY=sk_live_...`を保存します。このファイルはWorkerへの登録にだけ使い、Viteのビルドには読み込ませません。`CLERK_SECRET_KEY`を`VITE_`付き変数、`wrangler.json`の`vars`、通常ログへ入れません。
-5. ビルド環境にClerk本番の公開キーを`VITE_CLERK_PUBLISHABLE_KEY`として設定します。ローカルからデプロイする場合は、Git管理対象外の`.env.production.local`に`VITE_CLERK_PUBLISHABLE_KEY=pk_live_...`を保存できます。`pnpm check`を実行し、`pnpm build`後に次の検査コマンドが何も出力しないことを確認します。初回デプロイは`pnpm exec wrangler deploy --secrets-file .env.production.secrets`でWorkerとsecretを同時に作成し、`pnpm exec wrangler secret list`で名前を確認します。その後、所有する本番ドメインをWorkerに割り当てます。CIを使う場合も、ビルド時の公開キーとWorkerの2つのsecretをそれぞれの工程へ設定します。
+5. ビルド環境にClerk本番の公開キーを`VITE_CLERK_PUBLISHABLE_KEY`として設定します。ローカルからデプロイする場合は、Git管理対象外の`.env.production.local`に`VITE_CLERK_PUBLISHABLE_KEY=pk_live_...`を保存できます。`pnpm check`を実行し、下の「DBを含むデプロイ」でDBとWorkerを更新します。初回は`WORKER_SECRETS_FILE=.env.production.secrets pnpm run deploy`でWorkerのsecretも同時に登録します。`pnpm exec wrangler secret list`で名前を確認し、所有する本番ドメインをWorkerに割り当てます。CIを使う場合も、ビルド時の公開キーとWorkerの2つのsecretをそれぞれの工程へ設定します。
 
    ```bash
    rg -l 'sk_live_|postgres(ql)?://' dist/client
    ```
 
-初回デプロイ後は`pnpm run deploy`でコードを更新できます。`wrangler secret put`は即時にWorkerの新しいバージョンをデプロイするため、既存公開環境でキーを変更するときは対象環境と変更タイミングを先に確認してください。`wrangler.json`のHyperdrive IDやドメインを別環境へ合わせて変更した場合は、`pnpm cf-typegen`でbinding型を再生成します。
+### DBを含むデプロイ
+
+Neonの**直接接続**URLをGit管理外の`.env.deploy.local`へ保存します。`wrangler.json`の`DATABASE` Hyperdrive bindingが**同じNeonデータベース**を参照していることをCloudflare Dashboardで確認してください。接続URLはコマンド引数やチャットに貼らないでください。
+
+```bash
+cp .env.deploy.local.example .env.deploy.local
+chmod 600 .env.deploy.local
+# .env.deploy.local の PRODUCTION_DATABASE_URL に直接接続URLを設定
+pnpm run deploy
+```
+
+`pnpm run deploy`は接続先を検査し、Wranglerログイン確認、ビルド、Worker dry-run、本番DBの未適用migration、migration状態確認、Worker公開の順に実行します。Worker公開前の工程で失敗した場合はWorkerを更新しません。ローカルDB、Neonのpooler、SSL無効のURLは受け付けません。`PRODUCTION_DATABASE_URL`を環境変数で渡すこともできます。ViteのビルドやWorker公開の子プロセスにはDB URLを渡しません。既存DBにのみ適用し、DBの自動作成はしません。
+
+`pnpm deploy`はpnpm自身の別コマンドなので、アプリのデプロイには必ず`pnpm run deploy`を使います。
+
+`pnpm run deploy`は既存Workerのsecretを保持します。初回のsecret登録やキー更新時は、権限600のsecretファイルを`WORKER_SECRETS_FILE`で指定できます。WorkerをロールバックしてもDB migrationは戻りません。migrationは旧Workerでも動く互換性を保って追加し、公開後はログインと主要操作を確認します。`wrangler.json`のHyperdrive IDやドメインを別環境へ合わせて変更した場合は、`pnpm cf-typegen`でbinding型を再生成します。
+
+`wrangler secret put`は即時にWorkerの新しいバージョンをデプロイするため、既存公開環境でキーを変更するときは対象環境と変更タイミングを先に確認してください。
 
 ### 公開後の確認
 

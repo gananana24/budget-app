@@ -77,7 +77,7 @@
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && wrangler deploy --dry-run",
     "preview": "pnpm build && vite preview",
     "cf-typegen": "wrangler types",
-    "deploy": "pnpm build && wrangler deploy"
+    "deploy": "node scripts/deploy.ts"
   },
   "type": "module"
 }
