@@ -49,18 +49,24 @@ ORDER BY
 
 const EXPENSE_SQL = `
 SELECT
-  id::text AS id,
-  expense_date::text AS date,
-  amount,
-  category_id::text AS category_id,
-  memo,
-  created_at::text AS created_at,
-  updated_at::text AS updated_at
+  expenses.id::text AS id,
+  expenses.expense_date::text AS date,
+  expenses.amount,
+  expenses.category_id::text AS category_id,
+  expenses.memo,
+  expenses.created_at::text AS created_at,
+  expenses.updated_at::text AS updated_at,
+  occurrences.subscription_id::text AS source_subscription_id,
+  (subscriptions.ended_at IS NULL AND subscriptions.id IS NOT NULL) AS source_subscription_active
 FROM public.expenses
-WHERE household_id = $1::uuid
-  AND expense_date >= $2::date
-  AND expense_date < ($2::date + INTERVAL '1 month')
-ORDER BY expense_date DESC, created_at DESC, id DESC
+LEFT JOIN public.subscription_occurrences AS occurrences
+  ON occurrences.expense_id = expenses.id AND occurrences.household_id = expenses.household_id
+LEFT JOIN public.subscriptions
+  ON subscriptions.id = occurrences.subscription_id AND subscriptions.household_id = expenses.household_id
+WHERE expenses.household_id = $1::uuid
+  AND expenses.expense_date >= $2::date
+  AND expenses.expense_date < ($2::date + INTERVAL '1 month')
+ORDER BY expenses.expense_date DESC, expenses.created_at DESC, expenses.id DESC
 `
 
 const TOTALS_SQL = `
@@ -130,7 +136,8 @@ function readExpense(value: unknown): MonthlyExpenseRecord {
 		typeof row.id !== "string" ||
 		typeof row.date !== "string" ||
 		typeof row.created_at !== "string" ||
-		typeof row.updated_at !== "string"
+		typeof row.updated_at !== "string" ||
+		typeof row.source_subscription_active !== "boolean"
 	) {
 		throw new Error("Expense query returned invalid expense fields")
 	}
@@ -143,6 +150,8 @@ function readExpense(value: unknown): MonthlyExpenseRecord {
 		memo: readNullableString(row.memo, "expense memo"),
 		createdAt: row.created_at,
 		updatedAt: row.updated_at,
+		sourceSubscriptionId: readNullableString(row.source_subscription_id, "source subscription"),
+		sourceSubscriptionActive: row.source_subscription_active,
 	}
 }
 

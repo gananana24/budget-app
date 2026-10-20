@@ -124,5 +124,8 @@
 	"subscriptionDayOption": "Day {day}",
 	"subscriptionAnnualMonth": "Every {month}",
 	"subscriptionDeleteConfirm": "Delete this subscription?",
-	"subscriptionDeleteDescription": "Remove it from your subscriptions. Past expenses will remain."
+	"subscriptionDeleteDescription": "Remove it from your subscriptions. Past expenses will remain.",
+	"subscriptionSource": "Subscription",
+	"subscriptionOpenSettings": "View subscription settings",
+	"subscriptionAutoPostingNote": "An expense is added automatically on each payment date. Manually entered duplicates are not detected."
 }

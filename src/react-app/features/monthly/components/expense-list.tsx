@@ -94,6 +94,7 @@ function ExpenseRowContent({
 				<p className="app-text-muted mt-1 text-sm">
 					{formatShortDate(expense.date)}
 					{expense.memo ? ` · ${categoryName}` : ""}
+					{expense.sourceSubscriptionId ? ` · ${messages.subscription.source()}` : ""}
 				</p>
 			</div>
 			<div className="min-w-0 max-w-[40%] text-right">

@@ -1,9 +1,15 @@
 import { clerkMiddleware, getAuth } from "@clerk/hono"
-import { newWorkerDependencies } from "../infrastructure/di/injection"
+import { newScheduledDependencies, newWorkerDependencies } from "../infrastructure/di/injection"
 import { createHttpApp } from "../presentation/http/app"
 import { createAuthenticatedUserMiddleware } from "../presentation/http/authentication"
+import { getDateInTokyo } from "../domain/shared/services/tokyo-calendar"
 
 export default {
+	async scheduled(controller: ScheduledController, env: Env): Promise<void> {
+		const today = getDateInTokyo(new Date(controller.scheduledTime))
+		const posted = await newScheduledDependencies(env).execute(today)
+		console.info(JSON.stringify({ event: "subscription_posting", date: today, posted }))
+	},
 	async fetch(request: Request, env: Env, executionContext: ExecutionContext): Promise<Response> {
 		const dependencies = newWorkerDependencies(env)
 		const app = createHttpApp({

@@ -8,6 +8,7 @@ import {
 import type { SubscriptionRepository } from "../../domain/subscription/subscription-repository"
 import { InvalidValueError } from "../../domain/shared/exceptions/invalid-value-error"
 import { getDateInTokyo } from "../../domain/shared/services/tokyo-calendar"
+import type { PostDueSubscriptionUseCase } from "./post-due-subscriptions-use-case"
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
@@ -19,6 +20,12 @@ function idFrom(value: unknown): string {
 
 function nextFields(input: SubscriptionInput, now: Date) {
 	return subscriptionFields(input, getDateInTokyo(now))
+}
+
+function futureFields(input: SubscriptionInput, now: Date) {
+	const tomorrow = new Date(`${getDateInTokyo(now)}T00:00:00Z`)
+	tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
+	return subscriptionFields(input, tomorrow.toISOString().slice(0, 10))
 }
 
 export type SubscriptionResult = Readonly<{
@@ -120,6 +127,7 @@ export class DefaultUpdateSubscriptionUseCase implements UpdateSubscriptionUseCa
 	constructor(
 		private readonly repository: SubscriptionRepository,
 		private readonly now: () => Date,
+		private readonly postDue: PostDueSubscriptionUseCase,
 	) {}
 
 	async execute(
@@ -132,9 +140,11 @@ export class DefaultUpdateSubscriptionUseCase implements UpdateSubscriptionUseCa
 		const id = idFrom(input.id)
 		const existing = await this.repository.findActiveById(input.authorization.householdId, id)
 		if (!existing) throw new SubscriptionNotFoundError()
-		const updated = await this.repository.update(
-			existing.change(nextFields(input.details, this.now())),
-		)
+		const now = this.now()
+		await this.postDue.execute(id, getDateInTokyo(now))
+		const current = await this.repository.findActiveById(input.authorization.householdId, id)
+		if (!current) throw new SubscriptionNotFoundError()
+		const updated = await this.repository.update(current.change(futureFields(input.details, now)))
 		if (!updated) throw new SubscriptionNotFoundError()
 		return result(updated, getDateInTokyo(this.now()))
 	}
@@ -145,13 +155,19 @@ export interface EndSubscriptionUseCase {
 }
 
 export class DefaultEndSubscriptionUseCase implements EndSubscriptionUseCase {
-	constructor(private readonly repository: SubscriptionRepository) {}
+	constructor(
+		private readonly repository: SubscriptionRepository,
+		private readonly postDue: PostDueSubscriptionUseCase,
+		private readonly now: () => Date,
+	) {}
 
 	async execute(
 		input: Readonly<{ authorization: AuthorizationContext; id: unknown }>,
 	): Promise<void> {
 		const id = idFrom(input.id)
 		const existing = await this.repository.findActiveById(input.authorization.householdId, id)
-		if (!existing || !(await this.repository.end(existing))) throw new SubscriptionNotFoundError()
+		if (!existing) throw new SubscriptionNotFoundError()
+		await this.postDue.execute(id, getDateInTokyo(this.now()))
+		if (!(await this.repository.end(existing))) throw new SubscriptionNotFoundError()
 	}
 }

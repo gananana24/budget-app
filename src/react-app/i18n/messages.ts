@@ -68,6 +68,9 @@ export const messages = {
 		invalid: generatedMessages.subscriptionInvalid,
 		loading: generatedMessages.subscriptionLoading,
 		error: generatedMessages.subscriptionError,
+		source: generatedMessages.subscriptionSource,
+		openSettings: generatedMessages.subscriptionOpenSettings,
+		autoPostingNote: generatedMessages.subscriptionAutoPostingNote,
 	},
 	category: {
 		food: generatedMessages.categoryFood,

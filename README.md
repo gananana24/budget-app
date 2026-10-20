@@ -72,6 +72,23 @@ task dev
 | `pnpm lint` | oxlintとoxfmtの検査 |
 | `pnpm lint:fix` | oxlintの安全な自動修正とoxfmtで整形 |
 | `pnpm format` | oxfmtで整形 |
+
+### サブスクの自動登録をローカルで確認する
+
+サブスクの支出は毎日 00:10（日本時間）に登録します。Cron 設定は UTC の `10 15 * * *` です。定期実行を待たずに確認するときは、開発 DB にマイグレーションを適用した後、別のターミナルで次を実行します。
+
+```bash
+pnpm build
+pnpm exec wrangler dev --test-scheduled --port 8787
+```
+
+起動後に次の URL を呼びます。ローカルで到来済みのサブスクがある場合、開発 DB の通常の支出に登録されます。再度呼んでも同じ発生回は増えません。
+
+```bash
+curl 'http://localhost:8787/__scheduled?cron=10+15+*+*+*'
+```
+
+処理結果は Worker のログに `subscription_posting` と登録件数として出力されます。アプリを開いていなくても Cron が処理し、停止期間の未処理回は次の実行で補完します。実際の決済確認は行いません。
 | `pnpm format:check` | oxfmtの整形検査 |
 | `pnpm typecheck` | TypeScriptの型検査 |
 | `pnpm build` | プロダクションビルド |

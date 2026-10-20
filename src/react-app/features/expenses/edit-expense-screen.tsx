@@ -184,6 +184,15 @@ function EditExpenseForm({
 					</Button>
 				</FieldGroup>
 			</form>
+			{expense.sourceSubscriptionId && expense.sourceSubscriptionActive ? (
+				<Link
+					to="/subscriptions/$subscriptionId/edit"
+					params={{ subscriptionId: expense.sourceSubscriptionId }}
+					className="mt-5 inline-flex min-h-11 items-center text-sm font-medium text-[var(--budget-primary)] underline-offset-4 hover:underline"
+				>
+					{messages.subscription.openSettings()}
+				</Link>
+			) : null}
 			<div className="mt-10 border-t pt-6">
 				<Button
 					type="button"
